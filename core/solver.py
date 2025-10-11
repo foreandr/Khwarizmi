@@ -47,10 +47,7 @@ def simplify(expr: Expr, kernel: ProofKernel) -> Tuple[Expr, bool]:
                 print(f"  [APPLIED] {rule_name}: {current_expr} -> {new_expr}") # DEBUG: Successful rule application
                 current_expr = new_expr
                 changed = True
-                # A change occurred, so restart the entire rule application loop 
-                # (since a new rule might become applicable now)
+                # If a change occurred, restart the entire rule application loop 
                 break 
-            # else:
-            #     print(f"  [SKIP] {rule_name} (No change)") # Optional: for extreme verbosity
                 
     return current_expr, str(current_expr) != str(expr)
