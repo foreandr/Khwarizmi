@@ -1,3 +1,4 @@
+# core/axioms_vector_space.py
 # ------------------------------------------------------------
 # Vector Space Axioms — registered as rewrite rules
 # ------------------------------------------------------------
@@ -10,8 +11,10 @@ from .rules import Rule, register_rule
 
 def axiom_add_comm(expr):
     # u + v → v + u
+    # FIX: Only apply if str(u) > str(v) to enforce canonical (lexicographical) order.
     if isinstance(expr, Add):
-        return Add(expr.right, expr.left)
+        if str(expr.left) > str(expr.right):
+            return Add(expr.right, expr.left)
     return None
 
 
@@ -72,7 +75,7 @@ def axiom_scalar_id(expr):
 # Register all axioms
 # ------------------------------------------------------------
 
-register_rule(Rule("VS_Add_Comm", "Addition is commutative", axiom_add_comm))
+register_rule(Rule("VS_Add_Comm", "Addition is commutative (canonicalized)", axiom_add_comm))
 register_rule(Rule("VS_Add_Assoc", "Addition is associative", axiom_add_assoc))
 register_rule(Rule("VS_Add_Id", "Additive identity", axiom_add_id))
 register_rule(Rule("VS_Add_Inv", "Additive inverse", axiom_add_inv))
