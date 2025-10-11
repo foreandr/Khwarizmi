@@ -131,3 +131,4 @@ client_secrets.json
 !/assets/videos/
 # Un-ignore the MP4 files inside that specific folder
 !/assets/videos/*.mp4
+**/tests/**/*.pdf
