@@ -1,21 +1,9 @@
+# symbolic_math.py
+
 from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple, Optional
 import os
-
-LOG_FILE = "rewrite_log.txt"
-STEP_COUNTER = 0
-
-def log_step(description: str):
-    global STEP_COUNTER
-    STEP_COUNTER += 1
-    with open(LOG_FILE, "a") as f:
-        f.write(f"step {STEP_COUNTER}: {description}\n")
-
-def reset_log():
-    global STEP_COUNTER
-    STEP_COUNTER = 0
-    with open(LOG_FILE, "w") as f:
-        f.write("")
+from logger import log_step, reset_log, get_step_counter, LOG_FILE # Import from logger.py
 
 # ============================================================
 # Expression Classes
@@ -205,6 +193,9 @@ def evaluate_constants(expr: Expr) -> Expr:
         base, exp = evaluate_constants(expr.base), evaluate_constants(expr.exp)
         if isinstance(base, Const) and isinstance(exp, Const): return Const(base.value ** exp.value)
         return Pow(base, exp)
+    # The original implementation only recursed for binary ops, which is fine for this constant folding set,
+    # but for completeness, unary functions would also need to be checked if they contain constants.
+    # Since the original didn't include it, I'll keep the constant folding as is.
     return expr
 
 # ============================================================
@@ -250,7 +241,7 @@ def differentiate(expr: Expr, var: str) -> Expr:
                 Mul(PatternVar("u"), Differentiate(PatternVar("w"), Var(var))))),
         (Differentiate(Div(PatternVar("u"), PatternVar("w")), Var(var)),
             Div(Sub(Mul(Differentiate(PatternVar("u"), Var(var)), PatternVar("w")),
-                    Mul(PatternVar("u"), Differentiate(PatternVar("w"), Var(var)))),
+                      Mul(PatternVar("u"), Differentiate(PatternVar("w"), Var(var)))),
                 Pow(PatternVar("w"), Const(2)))),
 
         # power rule with constant exponent
@@ -288,6 +279,7 @@ def differentiate(expr: Expr, var: str) -> Expr:
 if __name__ == "__main__":
     x = Var("x")
 
+    # 3*x^2 + 4 + exp(2*x) + log(x) + sin(x) + cos(x) + tan(x)
     expr = Add(
         Add(Mul(Const(3), Pow(x, Const(2))), Const(4)),
         Add(Exp(Mul(Const(2), x)),
@@ -298,5 +290,5 @@ if __name__ == "__main__":
     print("Expr:", expr)
     d = differentiate(expr, "x")
     print("Differentiate:", d)
-    print(f"Total rewrite steps logged: {STEP_COUNTER}")
+    print(f"Total rewrite steps logged: {get_step_counter()}")
     print(f"Log written to: {os.path.abspath(LOG_FILE)}")
