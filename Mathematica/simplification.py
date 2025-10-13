@@ -1,4 +1,5 @@
 from rules import *
+import math
 
 # ============================================================
 # Simplification Rules
@@ -17,6 +18,12 @@ def simplification_rules() -> List[Tuple[Expr, Expr]]:
         (Pow(PatternVar("x"), Const(0)), Const(1)),
         (Div(PatternVar("x"), Const(1)), PatternVar("x")),
 
+        # --- NEW: General Algebraic Simplifications (Crucial for x^x) ---
+        (Mul(PatternVar("x"), Div(Const(1), PatternVar("x"))), Const(1)), # x * (1/x) -> 1
+        (Mul(Div(Const(1), PatternVar("x")), PatternVar("x")), Const(1)), # (1/x) * x -> 1
+        (Pow(Pow(PatternVar("u"), PatternVar("n")), PatternVar("m")), 
+         Pow(PatternVar("u"), Mul(PatternVar("n"), PatternVar("m")))), # (u^n)^m -> u^(n*m)
+
         # ---------- Negation simplifications ----------
         (Neg(Const(0)), Const(0)),
         (Neg(Const(-1)), Const(1)),
@@ -29,6 +36,10 @@ def simplification_rules() -> List[Tuple[Expr, Expr]]:
 
         # ---------- Log/Exp identities ----------
         (Exp(Log(PatternVar("x"))), PatternVar("x")), # exp(log(x)) -> x
+        (Log(Const(math.e)), Const(1)), # ln(e) -> 1 (Need math.e import for this to work correctly)
+        
+        # Using a constant value for e for robustness against floating point comparison
+        (Log(Const(2.71828)), Const(1)), # ln(2.71828) -> 1
 
         # ---------- Power/Reciprocal identities ----------
         (Div(Const(1), Pow(PatternVar("x"), PatternVar("n"))), Pow(PatternVar("x"), Neg(PatternVar("n")))), # 1/x^n -> x^-n

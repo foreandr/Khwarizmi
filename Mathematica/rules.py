@@ -84,6 +84,7 @@ class Tan(Expr):
     def children(self): return [self.arg]
     def __repr__(self): return f"tan({self.arg})"
 
+# --- Inverse Trig ---
 @dataclass
 class ArcSin(Expr):
     arg: Expr
@@ -101,6 +102,25 @@ class ArcTan(Expr):
     arg: Expr
     def children(self): return [self.arg]
     def __repr__(self): return f"arctan({self.arg})"
+
+@dataclass
+class ArcCsc(Expr): # NEW
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"arccsc({self.arg})"
+
+@dataclass
+class ArcSec(Expr): # NEW
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"arcsec({self.arg})"
+
+@dataclass
+class ArcCot(Expr): # NEW
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"arccot({self.arg})"
+
 
 @dataclass
 class Sqrt(Expr):
@@ -143,6 +163,43 @@ class Cot(Expr):
     arg: Expr
     def children(self): return [self.arg]
     def __repr__(self): return f"cot({self.arg})"
+
+# --- Hyperbolic Functions (NEW) ---
+@dataclass
+class Sinh(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"sinh({self.arg})"
+
+@dataclass
+class Cosh(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"cosh({self.arg})"
+
+@dataclass
+class Tanh(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"tanh({self.arg})"
+
+@dataclass
+class Coth(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"coth({self.arg})"
+
+@dataclass
+class Sech(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"sech({self.arg})"
+
+@dataclass
+class Csch(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"csch({self.arg})"
 
 # ============================================================
 # Pattern Matching / Substitution
@@ -218,7 +275,6 @@ def _rewrite_once(expr: Expr, rules: List[Tuple[Expr, Expr]]) -> Tuple[bool, Exp
             changed, new_val = _rewrite_once(val, rules)
             if changed:
                 # Create a new instance with the rewritten child
-                # FIX: Use field_names list to collect current arguments
                 new_args = [getattr(expr, name) for name in field_names]
                 # 'field' is the name of the attribute that was changed, so we find its index
                 new_args[field_names.index(field)] = new_val

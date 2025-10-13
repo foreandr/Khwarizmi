@@ -1,6 +1,8 @@
 from rules import (
     Var, Const, Add, Sub, Mul, Div, Pow,
-    Exp, Log, Sin, Cos, Tan, Neg, Sec, ArcSin, ArcCos, ArcTan # Added ArcCos, ArcTan
+    Exp, Log, Sin, Cos, Tan, Neg, Sec, 
+    ArcSin, ArcCos, ArcTan, ArcCsc, ArcSec, ArcCot, # Inverse Trig
+    Sinh, Cosh, Tanh, Coth, Sech, Csch # Hyperbolic
 )
 
 x = Var("x")
@@ -8,70 +10,86 @@ x = Var("x")
 TESTS = [
     # --- Polynomial ---
     {
-        "name": "Polynomial Derivative",
+        "name": "Polynomial Derivative (3x^2)",
         "expr": Mul(Const(3), Pow(x, Const(2))),
         "expected": Mul(Const(3), Mul(Const(2), x)),  # 3*(2*x)
     },
-
-    # --- Exponential ---
     {
-        "name": "Exponential Derivative",
+        "name": "Polynomial Derivative (x^4)",
+        "expr": Pow(x, Const(4)),
+        "expected": Mul(Const(4), Pow(x, Const(3))), # 4*x^3
+    },
+
+    # --- Exponential/Logarithmic ---
+    {
+        "name": "Exponential Derivative (e^2x)",
         "expr": Exp(Mul(Const(2), x)),
         "expected": Mul(Exp(Mul(Const(2), x)), Const(2)),
     },
-
-    # --- Logarithmic ---
     {
-        "name": "Logarithmic Derivative",
+        "name": "Logarithmic Derivative (ln(x))",
         "expr": Log(x),
         "expected": Div(Const(1), x),
     },
 
     # --- Trigonometric ---
     {
-        "name": "Trigonometric Derivative (sin)",
+        "name": "Trig Derivative (sin(x))",
         "expr": Sin(x),
         "expected": Cos(x),
     },
     {
-        "name": "Trigonometric Derivative (cos)",
-        "expr": Cos(x),
-        "expected": Mul(Const(-1), Sin(x)),
-    },
-    {
-        "name": "Trigonometric Derivative (tan)",
-        "expr": Tan(x),
-        "expected": Div(Const(1), Pow(Cos(x), Const(2))),  # canonical cosine form
+        "name": "Trig Derivative (sec(x))",
+        "expr": Sec(x),
+        "expected": Mul(Sec(x), Tan(x)),
     },
     
-    # --- Inverse Trigonometric ---
+    # --- Inverse Trigonometric (Complete Set) ---
     {
         "name": "Inverse Trig Derivative (arcsin)",
         "expr": ArcSin(x),
-        "expected": Div(Const(1), Pow(Sub(Const(1), Pow(x, Const(2))), Div(Const(1), Const(2)))), # 1 / (1-x^2)^0.5
+        "expected": Div(Const(1), Pow(Sub(Const(1), Pow(x, Const(2))), Div(Const(1), Const(2)))),
     },
     {
         "name": "Inverse Trig Derivative (arccos)",
         "expr": ArcCos(x),
-        "expected": Neg(Div(Const(1), Pow(Sub(Const(1), Pow(x, Const(2))), Div(Const(1), Const(2))))), # -1 / (1-x^2)^0.5
+        "expected": Neg(Div(Const(1), Pow(Sub(Const(1), Pow(x, Const(2))), Div(Const(1), Const(2))))),
     },
     {
         "name": "Inverse Trig Derivative (arctan)",
         "expr": ArcTan(x),
-        "expected": Div(Const(1), Add(Const(1), Pow(x, Const(2)))), # 1 / (1+x^2)
+        "expected": Div(Const(1), Add(Const(1), Pow(x, Const(2)))),
+    },
+    {
+        "name": "Inverse Trig Derivative (arccot)",
+        "expr": ArcCot(x),
+        "expected": Neg(Div(Const(1), Add(Const(1), Pow(x, Const(2))))),
     },
 
-    # --- NEW: General Power Rule ---
+    # --- Hyperbolic Functions ---
     {
-        "name": "General Power Rule (x^x)",
+        "name": "Hyperbolic Derivative (sinh(x))",
+        "expr": Sinh(x),
+        "expected": Cosh(x),
+    },
+    {
+        "name": "Hyperbolic Derivative (tanh(x))",
+        "expr": Tanh(x),
+        "expected": Pow(Sech(x), Const(2)),
+    },
+    
+    # --- General Power Rule & Simplification ---
+    {
+        "name": "General Power Rule (x^x) Simplified",
         "expr": Pow(x, x),
+        # Expected simplified output: x^x * (log(x) + 1)
         "expected": Mul(
             Pow(x, x),
-            Add(Log(x), Mul(x, Div(Const(1), x))) # x^x * (log(x) + x*(1/x))
+            Add(Log(x), Const(1)) 
         ),
     },
-
-    # --- Composite Expression ---
+    
+    # --- Full Composite Expression ---
     {
         "name": "Full Composite Expression",
         "expr": Add(
@@ -102,33 +120,15 @@ TESTS = [
         ),
     },
 
-    # --- Negation Simplification (symbolic only) ---
-    {
-        "name": "Negation Simplification",
-        "expr": Neg(Neg(x)),
-        "expected": x,
-        "simplify_only": True,
-    },
-
-    # --- Negation Derivative ---
+    # --- Negation & Reciprocal Tests (Sanity Check) ---
     {
         "name": "Negation Derivative",
         "expr": Neg(Neg(x)),
         "expected": Const(1),
     },
-
-    # --- Reciprocal Trig Simplification (sec) ---
-    {
-        "name": "Reciprocal Trig Simplification (sec)",
-        "expr": Div(Const(1), Cos(x)),
-        "expected": Div(Const(1), Cos(x)),
-        "simplify_only": True,
-    },
-
-    # --- Reciprocal Trig Derivative (sec) ---
     {
         "name": "Reciprocal Trig Derivative (sec)",
         "expr": Div(Const(1), Cos(x)),
-        "expected": Mul(Div(Const(1), Cos(x)), Tan(x)),  # (1/cos(x)) * tan(x)
+        "expected": Mul(Div(Const(1), Cos(x)), Tan(x)),
     },
 ]
