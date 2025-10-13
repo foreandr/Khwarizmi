@@ -61,21 +61,25 @@ def check_equal(expr1: Expr, expr2: Expr) -> bool:
             expr = evaluate_constants(expr)
         return expr
 
-    e1 = simplify(expr1)
-    e2 = simplify(expr2)
-
-    # canonicalize order of Add / Mul
-    def canonicalize(expr: Expr) -> Expr:
+    def flatten_add(expr):
         if isinstance(expr, Add):
-            a, b = expr.left, expr.right
-            if repr(a) > repr(b):
-                a, b = b, a
-            return Add(canonicalize(a), canonicalize(b))
+            return flatten_add(expr.left) + flatten_add(expr.right)
+        return [expr]
+
+    def flatten_mul(expr):
         if isinstance(expr, Mul):
-            a, b = expr.left, expr.right
-            if repr(a) > repr(b):
-                a, b = b, a
-            return Mul(canonicalize(a), canonicalize(b))
+            return flatten_mul(expr.left) + flatten_mul(expr.right)
+        return [expr]
+
+    def canonicalize(expr: Expr) -> Expr:
+        # Flatten associative ops
+        if isinstance(expr, Add):
+            terms = sorted([repr(t) for t in flatten_add(expr)])
+            return Add(Const(0), Const(0)) if not terms else terms  # placeholder not used directly
+        if isinstance(expr, Mul):
+            factors = sorted([repr(f) for f in flatten_mul(expr)])
+            return Mul(Const(1), Const(1)) if not factors else factors
+        # Recurse
         if isinstance(expr, Sub):
             return Sub(canonicalize(expr.left), canonicalize(expr.right))
         if isinstance(expr, Div):
@@ -94,10 +98,21 @@ def check_equal(expr1: Expr, expr2: Expr) -> bool:
             return Tan(canonicalize(expr.arg))
         return expr
 
+    e1 = simplify(expr1)
+    e2 = simplify(expr2)
+
+    # Canonicalize
     e1 = canonicalize(e1)
     e2 = canonicalize(e2)
 
-    return repr(e1) == repr(e2)
+    # Compare flattened associative sets
+    def equivalent(a, b):
+        if isinstance(a, list) and isinstance(b, list):
+            return sorted(a) == sorted(b)
+        return repr(a) == repr(b)
+
+    return equivalent(e1, e2)
+
 
 # ============================================================
 # Test Utilities
