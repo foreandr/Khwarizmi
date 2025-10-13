@@ -2,7 +2,8 @@ from rules import (
     Var, Const, Add, Sub, Mul, Div, Pow,
     Exp, Log, Sin, Cos, Tan, Neg, Sec, 
     ArcSin, ArcCos, ArcTan, ArcCsc, ArcSec, ArcCot, # Inverse Trig
-    Sinh, Cosh, Tanh, Coth, Sech, Csch # Hyperbolic
+    Sinh, Cosh, Tanh, Coth, Sech, Csch,
+    Integrate # NEW: Add Integrate
 )
 
 x = Var("x")
@@ -89,7 +90,7 @@ TESTS = [
         ),
     },
     
-    # --- Full Composite Expression ---
+    # --- Full Composite Expression (Sanity Check) ---
     {
         "name": "Full Composite Expression",
         "expr": Add(
@@ -130,5 +131,19 @@ TESTS = [
         "name": "Reciprocal Trig Derivative (sec)",
         "expr": Div(Const(1), Cos(x)),
         "expected": Mul(Div(Const(1), Cos(x)), Tan(x)),
+    },
+    
+    # --- NEW: Integration Tests ---
+    {
+        "name": "Integration Test (Power Rule x^3)",
+        "expr": Pow(x, Const(3)),
+        "expected": Div(Pow(x, Const(4)), Const(4)),
+        "integrate_only": True,
+    },
+    {
+        "name": "Integration Test (Linearity 2cos(x))",
+        "expr": Mul(Const(2), Cos(x)),
+        "expected": Mul(Const(2), Sin(x)),
+        "integrate_only": True,
     },
 ]

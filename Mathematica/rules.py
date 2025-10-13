@@ -104,19 +104,19 @@ class ArcTan(Expr):
     def __repr__(self): return f"arctan({self.arg})"
 
 @dataclass
-class ArcCsc(Expr): # NEW
+class ArcCsc(Expr):
     arg: Expr
     def children(self): return [self.arg]
     def __repr__(self): return f"arccsc({self.arg})"
 
 @dataclass
-class ArcSec(Expr): # NEW
+class ArcSec(Expr):
     arg: Expr
     def children(self): return [self.arg]
     def __repr__(self): return f"arcsec({self.arg})"
 
 @dataclass
-class ArcCot(Expr): # NEW
+class ArcCot(Expr):
     arg: Expr
     def children(self): return [self.arg]
     def __repr__(self): return f"arccot({self.arg})"
@@ -134,6 +134,12 @@ class Differentiate(Expr):
     expr: Expr; var: Var
     def children(self): return [self.expr, self.var]
     def __repr__(self): return f"d/d{self.var}({self.expr})"
+
+@dataclass
+class Integrate(Expr):
+    expr: Expr; var: Var
+    def children(self): return [self.expr, self.var]
+    def __repr__(self): return f"∫d{self.var}({self.expr})"
 
 @dataclass
 class PatternVar(Expr):
@@ -164,7 +170,7 @@ class Cot(Expr):
     def children(self): return [self.arg]
     def __repr__(self): return f"cot({self.arg})"
 
-# --- Hyperbolic Functions (NEW) ---
+# --- Hyperbolic Functions ---
 @dataclass
 class Sinh(Expr):
     arg: Expr
@@ -200,6 +206,13 @@ class Csch(Expr):
     arg: Expr
     def children(self): return [self.arg]
     def __repr__(self): return f"csch({self.arg})"
+    
+# --- Absolute Value ---
+@dataclass
+class Abs(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"abs({self.arg})"
 
 # ============================================================
 # Pattern Matching / Substitution
