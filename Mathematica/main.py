@@ -1,7 +1,15 @@
+# ============================================================
+# main.py — Differentiation Test Suite for Symbolic Engine
+# ============================================================
+
 import os
-import re
 from logger import log_step, reset_log, get_step_counter, LOG_FILE
-from rules import *
+from rules import (
+    Var, Const, Add, Sub, Mul, Div, Pow,
+    Exp, Log, Sin, Cos, Tan, Neg, Sec,
+    differentiate, simplification_rules
+)
+from equality import check_equal  # ✅ ensures structural equivalence
 
 # ============================================================
 # Colored Output Helpers
@@ -12,7 +20,9 @@ GREEN = "\033[92m"
 YELLOW = "\033[93m"
 RESET = "\033[0m"
 
+
 def print_result(name, passed, expected=None, got=None):
+    """Prints colored test results with optional expected/actual."""
     if passed:
         print(f"{GREEN}✅ PASS{RESET} - {name}")
     else:
@@ -22,108 +32,22 @@ def print_result(name, passed, expected=None, got=None):
             print(f"   Got:      {YELLOW}{got}{RESET}")
     print("-" * 60)
 
-# ============================================================
-# Normalization Helpers
-# ============================================================
-
-def normalize(expr_str: str) -> str:
-    """
-    Normalize expression strings for fair comparison:
-    - Remove spaces
-    - Simplify redundant parentheses
-    - Remove trailing/leading whitespace
-    """
-    if expr_str is None:
-        return ""
-    s = expr_str.strip()
-    s = s.replace(" ", "")
-    # Normalize redundant parentheses like ((x)) -> (x)
-    for _ in range(5):
-        s = re.sub(r"\(\s*([^\(\)]*)\s*\)", r"(\1)", s)
-        s = s.replace("((", "(").replace("))", ")")
-    return s
-
-# ============================================================
-# Equality Check using rewrite engine
-# ============================================================
-
-def check_equal(expr1: Expr, expr2: Expr) -> bool:
-    """
-    Determine if two expressions are mathematically equivalent
-    by repeatedly simplifying both sides using the rules engine.
-    """
-
-    def simplify(expr: Expr) -> Expr:
-        prev = None
-        while prev != repr(expr):
-            prev = repr(expr)
-            expr = rewrite(expr, simplification_rules())
-            expr = evaluate_constants(expr)
-        return expr
-
-    def flatten_add(expr):
-        if isinstance(expr, Add):
-            return flatten_add(expr.left) + flatten_add(expr.right)
-        return [expr]
-
-    def flatten_mul(expr):
-        if isinstance(expr, Mul):
-            return flatten_mul(expr.left) + flatten_mul(expr.right)
-        return [expr]
-
-    def canonicalize(expr: Expr) -> Expr:
-        # Flatten associative ops
-        if isinstance(expr, Add):
-            terms = sorted([repr(t) for t in flatten_add(expr)])
-            return Add(Const(0), Const(0)) if not terms else terms  # placeholder not used directly
-        if isinstance(expr, Mul):
-            factors = sorted([repr(f) for f in flatten_mul(expr)])
-            return Mul(Const(1), Const(1)) if not factors else factors
-        # Recurse
-        if isinstance(expr, Sub):
-            return Sub(canonicalize(expr.left), canonicalize(expr.right))
-        if isinstance(expr, Div):
-            return Div(canonicalize(expr.left), canonicalize(expr.right))
-        if isinstance(expr, Pow):
-            return Pow(canonicalize(expr.base), canonicalize(expr.exp))
-        if isinstance(expr, Exp):
-            return Exp(canonicalize(expr.arg))
-        if isinstance(expr, Log):
-            return Log(canonicalize(expr.arg))
-        if isinstance(expr, Sin):
-            return Sin(canonicalize(expr.arg))
-        if isinstance(expr, Cos):
-            return Cos(canonicalize(expr.arg))
-        if isinstance(expr, Tan):
-            return Tan(canonicalize(expr.arg))
-        return expr
-
-    e1 = simplify(expr1)
-    e2 = simplify(expr2)
-
-    # Canonicalize
-    e1 = canonicalize(e1)
-    e2 = canonicalize(e2)
-
-    # Compare flattened associative sets
-    def equivalent(a, b):
-        if isinstance(a, list) and isinstance(b, list):
-            return sorted(a) == sorted(b)
-        return repr(a) == repr(b)
-
-    return equivalent(e1, e2)
-
 
 # ============================================================
 # Test Utilities
 # ============================================================
 
-def run_test(name, expr, expected_expr):
+def run_test(name, expr, expected_expr, simplify_only=False):
+    """Run a differentiation or simplification test."""
     reset_log()
-    d = differentiate(expr, "x")
+    if simplify_only:
+        from rules import rewrite
+        result = rewrite(expr, simplification_rules())
+    else:
+        result = differentiate(expr, "x")
+    passed = check_equal(result, expected_expr)
+    print_result(name, passed, repr(expected_expr), repr(result))
 
-    passed = check_equal(d, expected_expr)
-    print_result(name, passed, repr(expected_expr), repr(d))
 
 # ============================================================
 # Define Expressions (Expr trees for expected values)
@@ -132,21 +56,28 @@ def run_test(name, expr, expected_expr):
 x = Var("x")
 
 TESTS = [
+    # --- Polynomial ---
     {
         "name": "Polynomial Derivative",
         "expr": Mul(Const(3), Pow(x, Const(2))),
         "expected": Mul(Const(3), Mul(Const(2), x)),  # 3*(2*x)
     },
+
+    # --- Exponential ---
     {
         "name": "Exponential Derivative",
         "expr": Exp(Mul(Const(2), x)),
         "expected": Mul(Exp(Mul(Const(2), x)), Const(2)),
     },
+
+    # --- Logarithmic ---
     {
         "name": "Logarithmic Derivative",
         "expr": Log(x),
         "expected": Div(Const(1), x),
     },
+
+    # --- Trigonometric ---
     {
         "name": "Trigonometric Derivative (sin)",
         "expr": Sin(x),
@@ -162,6 +93,8 @@ TESTS = [
         "expr": Tan(x),
         "expected": Div(Const(1), Pow(Cos(x), Const(2))),  # canonical cosine form
     },
+
+    # --- Composite Expression ---
     {
         "name": "Full Composite Expression",
         "expr": Add(
@@ -185,13 +118,44 @@ TESTS = [
                     Div(Const(1), x),
                     Add(
                         Add(Cos(x), Mul(Const(-1), Sin(x))),
-                        Div(Const(1), Pow(Cos(x), Const(2)))  # canonical form here
+                        Div(Const(1), Pow(Cos(x), Const(2)))
                     )
                 )
             )
         ),
     },
+
+    # --- Negation Simplification (symbolic only) ---
+    {
+        "name": "Negation Simplification",
+        "expr": Neg(Neg(x)),
+        "expected": x,
+        "simplify_only": True,
+    },
+
+    # --- Negation Derivative ---
+    {
+        "name": "Negation Derivative",
+        "expr": Neg(Neg(x)),
+        "expected": Const(1),
+    },
+
+    # --- Reciprocal Trig Simplification (sec) ---
+    {
+        "name": "Reciprocal Trig Simplification (sec)",
+        "expr": Div(Const(1), Cos(x)),
+        "expected": Div(Const(1), Cos(x)),
+        "simplify_only": True,
+    },
+
+    # --- Reciprocal Trig Derivative (sec) ---
+    {
+        "name": "Reciprocal Trig Derivative (sec)",
+        "expr": Div(Const(1), Cos(x)),
+        "expected": Mul(Div(Const(1), Cos(x)), Tan(x)),  # (1/cos(x)) * tan(x)
+    },
 ]
+
 
 # ============================================================
 # Run Tests
@@ -199,8 +163,10 @@ TESTS = [
 
 if __name__ == "__main__":
     print(f"\nRunning differentiation tests...\n{'=' * 60}\n")
+
     for test in TESTS:
-        run_test(test["name"], test["expr"], test["expected"])
+        simplify_only = test.get("simplify_only", False)
+        run_test(test["name"], test["expr"], test["expected"], simplify_only)
 
     total_steps = get_step_counter()
     print(f"\nTotal rewrite steps logged: {YELLOW}{total_steps}{RESET}")

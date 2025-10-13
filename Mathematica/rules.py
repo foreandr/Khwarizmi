@@ -95,6 +95,30 @@ class PatternVar(Expr):
     name: str
     def __repr__(self): return f"?{self.name}"
 
+@dataclass
+class Neg(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"(-{self.arg})"
+
+@dataclass
+class Sec(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"sec({self.arg})"
+
+@dataclass
+class Csc(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"csc({self.arg})"
+
+@dataclass
+class Cot(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"cot({self.arg})"
+
 # ============================================================
 # Pattern Matching / Substitution
 # ============================================================
@@ -191,7 +215,13 @@ def evaluate_constants(expr: Expr) -> Expr:
         return Div(left, right)
     if isinstance(expr, Pow):
         base, exp = evaluate_constants(expr.base), evaluate_constants(expr.exp)
-        if isinstance(base, Const) and isinstance(exp, Const): return Const(base.value ** exp.value)
+        if isinstance(base, Const) and isinstance(exp, Const):
+            # --- handle edge cases ---
+            if base.value == 0 and exp.value == 0:
+                return Const(1)  # define 0^0 = 1 symbolically
+            if base.value == 0 and exp.value < 0:
+                return Const(float("inf"))  # symbolic infinity
+            return Const(base.value ** exp.value)
         return Pow(base, exp)
     # The original implementation only recursed for binary ops, which is fine for this constant folding set,
     # but for completeness, unary functions would also need to be checked if they contain constants.
@@ -201,10 +231,9 @@ def evaluate_constants(expr: Expr) -> Expr:
 # ============================================================
 # Simplification Rules
 # ============================================================
-
 def simplification_rules() -> List[Tuple[Expr, Expr]]:
     return [
-        # ---------- Basic algebraic simplifications ----------
+        # ---------- Algebraic base identities ----------
         (Add(PatternVar("x"), Const(0)), PatternVar("x")),
         (Add(Const(0), PatternVar("x")), PatternVar("x")),
         (Sub(PatternVar("x"), Const(0)), PatternVar("x")),
@@ -216,11 +245,60 @@ def simplification_rules() -> List[Tuple[Expr, Expr]]:
         (Pow(PatternVar("x"), Const(0)), Const(1)),
         (Div(PatternVar("x"), Const(1)), PatternVar("x")),
 
-        # ---------- Trigonometric identity (canonical cosine form) ----------
-        # 1 + tan^2(u)  →  1 / (cos(u)^2)
+        # ---------- Negation simplifications ----------
+        (Neg(Const(0)), Const(0)),
+        (Neg(Const(-1)), Const(1)),
+        (Neg(Const(1)), Const(-1)),
+        (Neg(Neg(PatternVar("x"))), PatternVar("x")),
+        (Mul(Const(-1), PatternVar("x")), Neg(PatternVar("x"))),
+        (Mul(PatternVar("x"), Const(-1)), Neg(PatternVar("x"))),
+        (Add(PatternVar("x"), Neg(PatternVar("x"))), Const(0)),
+        (Sub(PatternVar("x"), PatternVar("x")), Const(0)),
+
+        # ---------- Reciprocal trig identities ----------
+        (Sec(PatternVar("u")), Div(Const(1), Cos(PatternVar("u")))),
+        (Csc(PatternVar("u")), Div(Const(1), Sin(PatternVar("u")))),
+        (Cot(PatternVar("u")), Div(Cos(PatternVar("u")), Sin(PatternVar("u")))),
+
+        # ---------- Canonical trig identities ----------
+        # tan^2(u) + 1  →  1 / cos^2(u)
+        (Add(Pow(Tan(PatternVar("u")), Const(2)), Const(1)),
+         Div(Const(1), Pow(Cos(PatternVar("u")), Const(2)))),
         (Add(Const(1), Pow(Tan(PatternVar("u")), Const(2))),
-         Div(Const(1), Pow(Cos(PatternVar("u")), Const(2))))
+         Div(Const(1), Pow(Cos(PatternVar("u")), Const(2)))),
+
+        # 1 / cos^2(u)  →  sec^2(u)
+        (Div(Const(1), Pow(Cos(PatternVar("u")), Const(2))),
+         Pow(Sec(PatternVar("u")), Const(2))),
+
+        (Sub(Const(0), PatternVar("x")), Mul(Const(-1), PatternVar("x"))),
+        (Sub(Const(0), Mul(Const(-1), PatternVar("x"))), PatternVar("x")),
+
+        (Add(Const(0), PatternVar("x")), PatternVar("x")),
+        (Add(PatternVar("x"), Const(0)), PatternVar("x")),
+        (Sub(PatternVar("x"), Const(0)), PatternVar("x")),
+
+        (Sub(Const(0), PatternVar("x")), Mul(Const(-1), PatternVar("x"))),
+        (Sub(Const(0), Mul(Const(-1), PatternVar("x"))), PatternVar("x")),
+        (Div(Sin(PatternVar("u")), Cos(PatternVar("u"))), Tan(PatternVar("u"))),
+
+        # ---------- Negation simplifications ----------
+        # (-(-x)) → x
+        (Mul(Const(-1), Mul(Const(-1), PatternVar("x"))), PatternVar("x")),
+        # (-(-1)) → 1
+        (Mul(Const(-1), Const(-1)), Const(1)),
+        # (-(-expr)) → expr (pattern form)
+        # (-(-expr)) → expr (pattern form)
+        (Sub(Const(0), Sub(Const(0), PatternVar("x"))), PatternVar("x")),
+
+        # sin(x)/cos(x)^2  →  (1/cos(x))*tan(x)
+        (
+            Div(Sin(PatternVar("u")), Pow(Cos(PatternVar("u")), Const(2))),
+            Mul(Div(Const(1), Cos(PatternVar("u"))), Tan(PatternVar("u")))
+        ),
+
     ]
+
 
 # ============================================================
 # Differentiation
@@ -269,6 +347,27 @@ def differentiate(expr: Expr, var: str) -> Expr:
             Mul(Const(-1), Mul(Sin(PatternVar("u")), Differentiate(PatternVar("u"), Var(var))))),
         (Differentiate(Tan(PatternVar("u")), Var(var)),
             Mul(Div(Const(1), Pow(Cos(PatternVar("u")), Const(2))), Differentiate(PatternVar("u"), Var(var)))),
+
+        # ----- Unary negation -----
+        (Differentiate(Neg(PatternVar("u")), Var(var)),
+        Neg(Differentiate(PatternVar("u"), Var(var)))),
+
+        # ----- Reciprocal trigonometric functions -----
+        (Differentiate(Sec(PatternVar("u")), Var(var)),
+        Mul(Sec(PatternVar("u")),
+            Mul(Tan(PatternVar("u")),
+                Differentiate(PatternVar("u"), Var(var))))),
+
+        (Differentiate(Csc(PatternVar("u")), Var(var)),
+        Neg(Mul(Csc(PatternVar("u")),
+                Mul(Cot(PatternVar("u")),
+                    Differentiate(PatternVar("u"), Var(var)))))),
+
+        (Differentiate(Cot(PatternVar("u")), Var(var)),
+        Neg(Mul(Div(Const(1), Pow(Sin(PatternVar("u")), Const(2))),
+                Differentiate(PatternVar("u"), Var(var))))),
+
+
     ]
     result = Differentiate(expr, v)
     prev = None
