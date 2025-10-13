@@ -1,9 +1,9 @@
 from rules import (
     Var, Const, Add, Sub, Mul, Div, Pow,
-    Exp, Log, Sin, Cos, Tan, Neg, Sec, 
+    Exp, Log, Sin, Cos, Tan, Neg, Sec, Csc, Cot, # FIX: Added Csc and Cot
     ArcSin, ArcCos, ArcTan, ArcCsc, ArcSec, ArcCot, # Inverse Trig
     Sinh, Cosh, Tanh, Coth, Sech, Csch,
-    Integrate # NEW: Add Integrate
+    Integrate 
 )
 
 x = Var("x")
@@ -133,7 +133,7 @@ TESTS = [
         "expected": Mul(Div(Const(1), Cos(x)), Tan(x)),
     },
     
-    # --- NEW: Integration Tests ---
+    # --- Integration Tests ---
     {
         "name": "Integration Test (Power Rule x^3)",
         "expr": Pow(x, Const(3)),
@@ -144,6 +144,32 @@ TESTS = [
         "name": "Integration Test (Linearity 2cos(x))",
         "expr": Mul(Const(2), Cos(x)),
         "expected": Mul(Const(2), Sin(x)),
+        "integrate_only": True,
+    },
+    
+    # NEW INTEGRATION TESTS
+    {
+        "name": "Integration Test (sec^2(x))",
+        "expr": Pow(Sec(x), Const(2)),
+        "expected": Tan(x),
+        "integrate_only": True,
+    },
+    {
+        "name": "Integration Test (csc^2(x))",
+        "expr": Pow(Csc(x), Const(2)), # This line caused the error
+        "expected": Neg(Cot(x)),
+        "integrate_only": True,
+    },
+    {
+        "name": "Integration Test (1/sqrt(1-x^2))",
+        "expr": Div(Const(1), Pow(Sub(Const(1), Pow(x, Const(2))), Div(Const(1), Const(2)))),
+        "expected": ArcSin(x),
+        "integrate_only": True,
+    },
+    {
+        "name": "Integration Test (1/(1+x^2))",
+        "expr": Div(Const(1), Add(Const(1), Pow(x, Const(2)))),
+        "expected": ArcTan(x),
         "integrate_only": True,
     },
 ]

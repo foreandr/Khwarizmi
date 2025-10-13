@@ -1,2 +1,1 @@
-step 1: ∫dx((?c*?u)) -> (?c*∫dx(?u)) on ∫dx((2*cos(x)))
-step 2: ∫dx(cos(x)) -> sin(x) on ∫dx(cos(x))
+step 1: ∫dx((1/(1+(x^2)))) -> arctan(x) on ∫dx((1/(1+(x^2))))

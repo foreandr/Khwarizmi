@@ -40,6 +40,23 @@ def integration_rules(var: str) -> List[Tuple[Expr, Expr]]:
         (Integrate(Cos(v), v), Sin(v)),
         # ∫sin(x) dx = -cos(x)
         (Integrate(Sin(v), v), Neg(Cos(v))),
+        
+        # NEW: ∫sec^2(x) dx = tan(x)
+        # Note: This pattern matches the derivative of tan(x)
+        (Integrate(Pow(Sec(v), Const(2)), v), Tan(v)),
+        
+        # NEW: ∫csc^2(x) dx = -cot(x)
+        # Note: This pattern matches the derivative of -cot(x)
+        (Integrate(Pow(Csc(v), Const(2)), v), Neg(Cot(v))),
+
+        # --- Inverse Trigonometric Rules ---
+        # NEW: ∫(1 / sqrt(1 - x^2)) dx = arcsin(x)
+        (Integrate(Div(Const(1), Pow(Sub(Const(1), Pow(v, Const(2))), Div(Const(1), Const(2)))), v),
+         ArcSin(v)),
+         
+        # NEW: ∫(1 / (1 + x^2)) dx = arctan(x)
+        (Integrate(Div(Const(1), Add(Const(1), Pow(v, Const(2)))), v),
+         ArcTan(v)),
     ]
 
 def integrate(expr: Expr, var: str) -> Expr:
