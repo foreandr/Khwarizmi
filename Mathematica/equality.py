@@ -3,7 +3,7 @@
 # ============================================================
 
 from rules import *  # imports Expr, Add, Mul, rewrite, simplification_rules, evaluate_constants
-
+from simplification import *
 def check_equal(expr1: Expr, expr2: Expr) -> bool:
     """
     Determine if two expressions are mathematically equivalent

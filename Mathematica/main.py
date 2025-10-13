@@ -7,9 +7,10 @@ from logger import log_step, reset_log, get_step_counter, LOG_FILE
 from rules import (
     Var, Const, Add, Sub, Mul, Div, Pow,
     Exp, Log, Sin, Cos, Tan, Neg, Sec,
-    differentiate, simplification_rules
 )
+from differentiation import differentiate
 from equality import check_equal  # ✅ ensures structural equivalence
+from simplification import simplification_rules
 
 # ============================================================
 # Colored Output Helpers
