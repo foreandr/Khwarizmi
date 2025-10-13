@@ -17,8 +17,6 @@ def differentiate(expr: Expr, var: str) -> Expr:
             Add(Differentiate(PatternVar("u"), Var(var)), Differentiate(PatternVar("w"), Var(var)))),
         (Differentiate(Sub(PatternVar("u"), PatternVar("w")), Var(var)),
             Sub(Differentiate(PatternVar("u"), Var(var)), Differentiate(PatternVar("w"), Var(var)))),
-        
-        # --- NEW: Constant Multiple Rule ---
         (Differentiate(Mul(Const(PatternVar("c")), PatternVar("u")), Var(var)),
             Mul(Const(PatternVar("c")), Differentiate(PatternVar("u"), Var(var)))),
 
@@ -31,11 +29,18 @@ def differentiate(expr: Expr, var: str) -> Expr:
                       Mul(PatternVar("u"), Differentiate(PatternVar("w"), Var(var)))),
                 Pow(PatternVar("w"), Const(2)))),
 
-        # power rule with constant exponent
+        # --- IMPORTANT FIX: Constant Power Rule (u^n) must be FIRST (more specific) ---
         (Differentiate(Pow(PatternVar("u"), Const(PatternVar("n"))), Var(var)),
             Mul(Const(PatternVar("n")),
                 Mul(Pow(PatternVar("u"), Sub(Const(PatternVar("n")), Const(1))),
                     Differentiate(PatternVar("u"), Var(var))))),
+        
+        # --- General Power Rule (u^w, must be SECOND / more general) ---
+        # d/dx(u^w) = u^w * [ w' * ln(u) + w * (u'/u) ]
+        (Differentiate(Pow(PatternVar("u"), PatternVar("w")), Var(var)),
+            Mul(Pow(PatternVar("u"), PatternVar("w")),
+                Add(Mul(Differentiate(PatternVar("w"), Var(var)), Log(PatternVar("u"))),
+                    Mul(PatternVar("w"), Div(Differentiate(PatternVar("u"), Var(var)), PatternVar("u")))))),
 
         # exp / log
         (Differentiate(Exp(PatternVar("u")), Var(var)),
@@ -52,11 +57,20 @@ def differentiate(expr: Expr, var: str) -> Expr:
             Mul(Div(Const(1), Pow(Cos(PatternVar("u")), Const(2))), Differentiate(PatternVar("u"), Var(var)))),
 
         # ----- Inverse Trig -----
-        # --- NEW: ArcSin Rule (using Pow for square root) ---
         (Differentiate(ArcSin(PatternVar("u")), Var(var)),
             Div(Differentiate(PatternVar("u"), Var(var)),
                 Pow(Sub(Const(1), Pow(PatternVar("u"), Const(2))),
-                    Div(Const(1), Const(2))))),
+                    Div(Const(1), Const(2))))), # 1 / (1-u^2)^0.5 * u'
+        
+        (Differentiate(ArcCos(PatternVar("u")), Var(var)),
+            Neg(Div(Differentiate(PatternVar("u"), Var(var)),
+                Pow(Sub(Const(1), Pow(PatternVar("u"), Const(2))),
+                    Div(Const(1), Const(2)))))), # -1 / (1-u^2)^0.5 * u'
+
+        (Differentiate(ArcTan(PatternVar("u")), Var(var)),
+            Div(Differentiate(PatternVar("u"), Var(var)),
+                Add(Const(1), Pow(PatternVar("u"), Const(2))))), # 1 / (1+u^2) * u'
+
 
         # ----- Unary negation -----
         (Differentiate(Neg(PatternVar("u")), Var(var)),

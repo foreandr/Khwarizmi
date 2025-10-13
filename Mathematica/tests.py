@@ -1,6 +1,6 @@
 from rules import (
     Var, Const, Add, Sub, Mul, Div, Pow,
-    Exp, Log, Sin, Cos, Tan, Neg, Sec, ArcSin, # Added ArcSin
+    Exp, Log, Sin, Cos, Tan, Neg, Sec, ArcSin, ArcCos, ArcTan # Added ArcCos, ArcTan
 )
 
 x = Var("x")
@@ -44,11 +44,31 @@ TESTS = [
         "expected": Div(Const(1), Pow(Cos(x), Const(2))),  # canonical cosine form
     },
     
-    # --- NEW: Inverse Trigonometric ---
+    # --- Inverse Trigonometric ---
     {
         "name": "Inverse Trig Derivative (arcsin)",
         "expr": ArcSin(x),
         "expected": Div(Const(1), Pow(Sub(Const(1), Pow(x, Const(2))), Div(Const(1), Const(2)))), # 1 / (1-x^2)^0.5
+    },
+    {
+        "name": "Inverse Trig Derivative (arccos)",
+        "expr": ArcCos(x),
+        "expected": Neg(Div(Const(1), Pow(Sub(Const(1), Pow(x, Const(2))), Div(Const(1), Const(2))))), # -1 / (1-x^2)^0.5
+    },
+    {
+        "name": "Inverse Trig Derivative (arctan)",
+        "expr": ArcTan(x),
+        "expected": Div(Const(1), Add(Const(1), Pow(x, Const(2)))), # 1 / (1+x^2)
+    },
+
+    # --- NEW: General Power Rule ---
+    {
+        "name": "General Power Rule (x^x)",
+        "expr": Pow(x, x),
+        "expected": Mul(
+            Pow(x, x),
+            Add(Log(x), Mul(x, Div(Const(1), x))) # x^x * (log(x) + x*(1/x))
+        ),
     },
 
     # --- Composite Expression ---
