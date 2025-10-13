@@ -27,6 +27,13 @@ def simplification_rules() -> List[Tuple[Expr, Expr]]:
         (Add(PatternVar("x"), Neg(PatternVar("x"))), Const(0)),
         (Sub(PatternVar("x"), PatternVar("x")), Const(0)),
 
+        # ---------- Log/Exp identities ----------
+        (Exp(Log(PatternVar("x"))), PatternVar("x")), # exp(log(x)) -> x
+
+        # ---------- Power/Reciprocal identities ----------
+        (Div(Const(1), Pow(PatternVar("x"), PatternVar("n"))), Pow(PatternVar("x"), Neg(PatternVar("n")))), # 1/x^n -> x^-n
+        (Div(PatternVar("x"), PatternVar("x")), Const(1)), # x/x -> 1 (safety rule, assuming x != 0)
+
         # ---------- Reciprocal trig identities ----------
         (Sec(PatternVar("u")), Div(Const(1), Cos(PatternVar("u")))),
         (Csc(PatternVar("u")), Div(Const(1), Sin(PatternVar("u")))),
@@ -54,12 +61,11 @@ def simplification_rules() -> List[Tuple[Expr, Expr]]:
         (Sub(Const(0), Mul(Const(-1), PatternVar("x"))), PatternVar("x")),
         (Div(Sin(PatternVar("u")), Cos(PatternVar("u"))), Tan(PatternVar("u"))),
 
-        # ---------- Negation simplifications ----------
+        # ---------- Negation simplifications (advanced) ----------
         # (-(-x)) → x
         (Mul(Const(-1), Mul(Const(-1), PatternVar("x"))), PatternVar("x")),
         # (-(-1)) → 1
         (Mul(Const(-1), Const(-1)), Const(1)),
-        # (-(-expr)) → expr (pattern form)
         # (-(-expr)) → expr (pattern form)
         (Sub(Const(0), Sub(Const(0), PatternVar("x"))), PatternVar("x")),
 
@@ -70,4 +76,3 @@ def simplification_rules() -> List[Tuple[Expr, Expr]]:
         ),
 
     ]
-

@@ -1,7 +1,6 @@
-
 from rules import (
     Var, Const, Add, Sub, Mul, Div, Pow,
-    Exp, Log, Sin, Cos, Tan, Neg, Sec,
+    Exp, Log, Sin, Cos, Tan, Neg, Sec, ArcSin, # Added ArcSin
 )
 
 x = Var("x")
@@ -43,6 +42,13 @@ TESTS = [
         "name": "Trigonometric Derivative (tan)",
         "expr": Tan(x),
         "expected": Div(Const(1), Pow(Cos(x), Const(2))),  # canonical cosine form
+    },
+    
+    # --- NEW: Inverse Trigonometric ---
+    {
+        "name": "Inverse Trig Derivative (arcsin)",
+        "expr": ArcSin(x),
+        "expected": Div(Const(1), Pow(Sub(Const(1), Pow(x, Const(2))), Div(Const(1), Const(2)))), # 1 / (1-x^2)^0.5
     },
 
     # --- Composite Expression ---
@@ -106,4 +112,3 @@ TESTS = [
         "expected": Mul(Div(Const(1), Cos(x)), Tan(x)),  # (1/cos(x)) * tan(x)
     },
 ]
-

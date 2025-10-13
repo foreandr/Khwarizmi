@@ -17,6 +17,10 @@ def differentiate(expr: Expr, var: str) -> Expr:
             Add(Differentiate(PatternVar("u"), Var(var)), Differentiate(PatternVar("w"), Var(var)))),
         (Differentiate(Sub(PatternVar("u"), PatternVar("w")), Var(var)),
             Sub(Differentiate(PatternVar("u"), Var(var)), Differentiate(PatternVar("w"), Var(var)))),
+        
+        # --- NEW: Constant Multiple Rule ---
+        (Differentiate(Mul(Const(PatternVar("c")), PatternVar("u")), Var(var)),
+            Mul(Const(PatternVar("c")), Differentiate(PatternVar("u"), Var(var)))),
 
         # product / quotient
         (Differentiate(Mul(PatternVar("u"), PatternVar("w")), Var(var)),
@@ -47,6 +51,13 @@ def differentiate(expr: Expr, var: str) -> Expr:
         (Differentiate(Tan(PatternVar("u")), Var(var)),
             Mul(Div(Const(1), Pow(Cos(PatternVar("u")), Const(2))), Differentiate(PatternVar("u"), Var(var)))),
 
+        # ----- Inverse Trig -----
+        # --- NEW: ArcSin Rule (using Pow for square root) ---
+        (Differentiate(ArcSin(PatternVar("u")), Var(var)),
+            Div(Differentiate(PatternVar("u"), Var(var)),
+                Pow(Sub(Const(1), Pow(PatternVar("u"), Const(2))),
+                    Div(Const(1), Const(2))))),
+
         # ----- Unary negation -----
         (Differentiate(Neg(PatternVar("u")), Var(var)),
         Neg(Differentiate(PatternVar("u"), Var(var)))),
@@ -65,9 +76,8 @@ def differentiate(expr: Expr, var: str) -> Expr:
         (Differentiate(Cot(PatternVar("u")), Var(var)),
         Neg(Mul(Div(Const(1), Pow(Sin(PatternVar("u")), Const(2))),
                 Differentiate(PatternVar("u"), Var(var))))),
-
-
     ]
+    
     result = Differentiate(expr, v)
     prev = None
     while prev != repr(result):

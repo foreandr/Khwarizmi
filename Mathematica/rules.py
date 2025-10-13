@@ -85,6 +85,31 @@ class Tan(Expr):
     def __repr__(self): return f"tan({self.arg})"
 
 @dataclass
+class ArcSin(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"arcsin({self.arg})"
+
+@dataclass
+class ArcCos(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"arccos({self.arg})"
+
+@dataclass
+class ArcTan(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"arctan({self.arg})"
+
+@dataclass
+class Sqrt(Expr):
+    arg: Expr
+    def children(self): return [self.arg]
+    def __repr__(self): return f"sqrt({self.arg})"
+
+
+@dataclass
 class Differentiate(Expr):
     expr: Expr; var: Var
     def children(self): return [self.expr, self.var]
@@ -183,13 +208,22 @@ def _rewrite_once(expr: Expr, rules: List[Tuple[Expr, Expr]]) -> Tuple[bool, Exp
             new_expr = substitute(replacement, bindings)
             log_step(f"{pattern} -> {replacement} on {expr}")
             return True, new_expr
-    for field in getattr(expr, "__dataclass_fields__", {}):
+            
+    fields = getattr(expr, "__dataclass_fields__", {})
+    field_names = list(fields.keys())
+
+    for field in field_names: # 'field' is the name string, e.g. "left"
         val = getattr(expr, field)
         if isinstance(val, Expr):
             changed, new_val = _rewrite_once(val, rules)
             if changed:
-                setattr(expr, field, new_val)
-                return True, expr
+                # Create a new instance with the rewritten child
+                # FIX: Use field_names list to collect current arguments
+                new_args = [getattr(expr, name) for name in field_names]
+                # 'field' is the name of the attribute that was changed, so we find its index
+                new_args[field_names.index(field)] = new_val
+                
+                return True, type(expr)(*new_args)
     return False, expr
 
 # ============================================================
@@ -223,11 +257,9 @@ def evaluate_constants(expr: Expr) -> Expr:
                 return Const(float("inf"))  # symbolic infinity
             return Const(base.value ** exp.value)
         return Pow(base, exp)
-    # The original implementation only recursed for binary ops, which is fine for this constant folding set,
-    # but for completeness, unary functions would also need to be checked if they contain constants.
-    # Since the original didn't include it, I'll keep the constant folding as is.
+    # Recursively apply constant folding to unary functions
+    if hasattr(expr, 'arg'):
+        new_arg = evaluate_constants(expr.arg)
+        if new_arg != expr.arg:
+            return type(expr)(new_arg)
     return expr
-
-
-
-
