@@ -145,7 +145,7 @@ TESTS = [
     {
         "name": "Trigonometric Derivative (tan)",
         "expr": Tan(x),
-        "expected": Add(Const(1), Pow(Tan(x), Const(2))),  # 1 + tan^2(x)
+        "expected": Div(Const(1), Pow(Cos(x), Const(2))),  # canonical cosine form
     },
     {
         "name": "Full Composite Expression",
@@ -170,7 +170,7 @@ TESTS = [
                     Div(Const(1), x),
                     Add(
                         Add(Cos(x), Mul(Const(-1), Sin(x))),
-                        Add(Const(1), Pow(Tan(x), Const(2)))
+                        Div(Const(1), Pow(Cos(x), Const(2)))  # canonical form here
                     )
                 )
             )

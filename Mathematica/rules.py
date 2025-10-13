@@ -204,6 +204,7 @@ def evaluate_constants(expr: Expr) -> Expr:
 
 def simplification_rules() -> List[Tuple[Expr, Expr]]:
     return [
+        # ---------- Basic algebraic simplifications ----------
         (Add(PatternVar("x"), Const(0)), PatternVar("x")),
         (Add(Const(0), PatternVar("x")), PatternVar("x")),
         (Sub(PatternVar("x"), Const(0)), PatternVar("x")),
@@ -214,6 +215,11 @@ def simplification_rules() -> List[Tuple[Expr, Expr]]:
         (Pow(PatternVar("x"), Const(1)), PatternVar("x")),
         (Pow(PatternVar("x"), Const(0)), Const(1)),
         (Div(PatternVar("x"), Const(1)), PatternVar("x")),
+
+        # ---------- Trigonometric identity (canonical cosine form) ----------
+        # 1 + tan^2(u)  →  1 / (cos(u)^2)
+        (Add(Const(1), Pow(Tan(PatternVar("u")), Const(2))),
+         Div(Const(1), Pow(Cos(PatternVar("u")), Const(2))))
     ]
 
 # ============================================================
