@@ -4,7 +4,6 @@
 from rules import *
 from simplification import *
 def differentiate(expr: Expr, var: str) -> Expr:
-    reset_log()
     v = Var(var)
     
     # Placeholder for |u| using Pow for square root of u^2

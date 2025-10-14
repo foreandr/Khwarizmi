@@ -143,9 +143,6 @@ def try_integration_by_parts(integrand: Expr, var: Var) -> Optional[Expr]:
 # Main Integration Driver
 # ------------------------------------------------------------
 def integrate(expr: Expr, var: str, reset: bool = True) -> Expr:
-    if reset:
-        reset_log()
-
     v = Var(var)
     log_step(f"Integrating expression: {expr}")
 
@@ -195,6 +192,7 @@ def integrate(expr: Expr, var: str, reset: bool = True) -> Expr:
 # DEBUG HARNESS
 # ------------------------------------------------------------
 if __name__ == "__main__":
+    reset_log()
     print("\n=== Integration Debug Harness (Hierarchical Logger) ===\n")
 
     x = Var("x")
@@ -207,6 +205,7 @@ if __name__ == "__main__":
         print(f"▶ {name}")
         print(f"Input : {expr}")
         result = integrate(expr, "x")
+        # input("--")
         print(f"Output: {result}")
         print(f"Total rewrite steps logged: {get_step_counter()}")
         print(f"Log written to: {LOG_FILE}")

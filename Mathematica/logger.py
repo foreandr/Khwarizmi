@@ -58,6 +58,16 @@ def log_step(description: str):
 def reset_log():
     """Reset the step counter and clear the log file."""
     global STEP_COUNTER, DEPTH
+    
+    # --- New code for the stylized print ---
+    RED, GREEN, YELLOW, RESET = "\033[91m", "\033[92m", "\033[93m", "\033[0m"
+    
+    print(f"\n{RED}="*40)
+    print(f"{RED}* {YELLOW}LOG AND STEP COUNTER RESET INITIATED{RED} *")
+    print(f"{RED}* {GREEN}STARTING A CLEAN TEST RUN NOW!{RED}      *")
+    print(f"{RED}="*40 + RESET)
+    # -------------------------------------
+    
     STEP_COUNTER = 0
     DEPTH = 0
     with open(LOG_FILE, "w", encoding="utf-8") as f:
