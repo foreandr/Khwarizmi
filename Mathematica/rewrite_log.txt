@@ -1,13 +1,163 @@
-step 1: [depth 0] Integrating expression: ((2*x)/((x^2)+3))
-step 2:   [depth 1] Attempting U-Substitution on ((2*x)/((x^2)+3))
-step 3:   [depth 1] d/dx((?u+?w)) -> (d/dx(?u)+d/dx(?w)) on d/dx(((x^2)+3))
-step 4:   [depth 1] d/dx((?u^?n)) -> (?n*((?u^(?n-1))*d/dx(?u))) on d/dx((x^2))
-step 5:   [depth 1] d/dx(x) -> 1 on d/dx(x)
-step 6:   [depth 1] d/d?vv(?c) -> 0 on d/dx(3)
-step 7:   [depth 1] (?x+0) -> ?x on ((2*((x^1)*1))+0)
-step 8:   [depth 1] (?x*1) -> ?x on ((x^1)*1)
-step 9:   [depth 1] (?x^1) -> ?x on (x^1)
-step 10:   [depth 1] (?x/?x) -> 1 on ((2*x)/(2*x))
-step 11:   [depth 1] Proportional U-Sub detected (log rule): scaled by 1
-step 12:   [depth 1] Returning from U-Substitution: (1*log(((x^2)+3)))
-step 13:   [depth 1] (1*?x) -> ?x on (1*log(((x^2)+3)))
+step 1: [depth 0] Integrating expression: (sec((2*x))^2)
+step 2:   [depth 1] Attempting U-Substitution on (sec((2*x))^2)
+step 3:   [depth 1] U-Substitution failed.
+step 4:   [depth 1] Attempting Integration by Parts on (sec((2*x))^2)
+step 5:   [depth 1] Integration by Parts failed.
+step 6:   [depth 1] sec(?u) -> (1/cos(?u)) on sec((2*x))
+step 7:   [depth 1] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 8:     [depth 2] Integrating expression: ((1/cos((2*x)))^2)
+step 9:     [depth 2] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 10:     [depth 2] U-Substitution failed.
+step 11:     [depth 2] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 12:     [depth 2] Integration by Parts failed.
+step 13:     [depth 2] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 14:       [depth 3] Integrating expression: ((1/cos((2*x)))^2)
+step 15:       [depth 3] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 16:       [depth 3] U-Substitution failed.
+step 17:       [depth 3] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 18:       [depth 3] Integration by Parts failed.
+step 19:       [depth 3] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 20:         [depth 4] Integrating expression: ((1/cos((2*x)))^2)
+step 21:         [depth 4] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 22:         [depth 4] U-Substitution failed.
+step 23:         [depth 4] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 24:         [depth 4] Integration by Parts failed.
+step 25:         [depth 4] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 26:           [depth 5] Integrating expression: ((1/cos((2*x)))^2)
+step 27:           [depth 5] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 28:           [depth 5] U-Substitution failed.
+step 29:           [depth 5] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 30:           [depth 5] Integration by Parts failed.
+step 31:           [depth 5] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 32:             [depth 6] Integrating expression: ((1/cos((2*x)))^2)
+step 33:             [depth 6] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 34:             [depth 6] U-Substitution failed.
+step 35:             [depth 6] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 36:             [depth 6] Integration by Parts failed.
+step 37:             [depth 6] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 38:               [depth 7] Integrating expression: ((1/cos((2*x)))^2)
+step 39:               [depth 7] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 40:               [depth 7] U-Substitution failed.
+step 41:               [depth 7] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 42:               [depth 7] Integration by Parts failed.
+step 43:               [depth 7] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 44:                 [depth 8] Integrating expression: ((1/cos((2*x)))^2)
+step 45:                 [depth 8] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 46:                 [depth 8] U-Substitution failed.
+step 47:                 [depth 8] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 48:                 [depth 8] Integration by Parts failed.
+step 49:                 [depth 8] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 50:                   [depth 9] Integrating expression: ((1/cos((2*x)))^2)
+step 51:                   [depth 9] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 52:                   [depth 9] U-Substitution failed.
+step 53:                   [depth 9] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 54:                   [depth 9] Integration by Parts failed.
+step 55:                   [depth 9] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 56:                     [depth 10] Integrating expression: ((1/cos((2*x)))^2)
+step 57:                     [depth 10] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 58:                     [depth 10] U-Substitution failed.
+step 59:                     [depth 10] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 60:                     [depth 10] Integration by Parts failed.
+step 61:                     [depth 10] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 62:                       [depth 11] Integrating expression: ((1/cos((2*x)))^2)
+step 63:                       [depth 11] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 64:                       [depth 11] U-Substitution failed.
+step 65:                       [depth 11] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 66:                       [depth 11] Integration by Parts failed.
+step 67:                       [depth 11] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 68:                         [depth 12] Integrating expression: ((1/cos((2*x)))^2)
+step 69:                         [depth 12] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 70:                         [depth 12] U-Substitution failed.
+step 71:                         [depth 12] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 72:                         [depth 12] Integration by Parts failed.
+step 73:                         [depth 12] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 74:                           [depth 13] Integrating expression: ((1/cos((2*x)))^2)
+step 75:                           [depth 13] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 76:                           [depth 13] U-Substitution failed.
+step 77:                           [depth 13] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 78:                           [depth 13] Integration by Parts failed.
+step 79:                           [depth 13] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 80:                             [depth 14] Integrating expression: ((1/cos((2*x)))^2)
+step 81:                             [depth 14] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 82:                             [depth 14] U-Substitution failed.
+step 83:                             [depth 14] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 84:                             [depth 14] Integration by Parts failed.
+step 85:                             [depth 14] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 86:                               [depth 15] Integrating expression: ((1/cos((2*x)))^2)
+step 87:                               [depth 15] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 88:                               [depth 15] U-Substitution failed.
+step 89:                               [depth 15] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 90:                               [depth 15] Integration by Parts failed.
+step 91:                               [depth 15] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 92:                                 [depth 16] Integrating expression: ((1/cos((2*x)))^2)
+step 93:                                 [depth 16] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 94:                                 [depth 16] U-Substitution failed.
+step 95:                                 [depth 16] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 96:                                 [depth 16] Integration by Parts failed.
+step 97:                                 [depth 16] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 98:                                   [depth 17] Integrating expression: ((1/cos((2*x)))^2)
+step 99:                                   [depth 17] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 100:                                   [depth 17] U-Substitution failed.
+step 101:                                   [depth 17] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 102:                                   [depth 17] Integration by Parts failed.
+step 103:                                   [depth 17] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 104:                                     [depth 18] Integrating expression: ((1/cos((2*x)))^2)
+step 105:                                     [depth 18] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 106:                                     [depth 18] U-Substitution failed.
+step 107:                                     [depth 18] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 108:                                     [depth 18] Integration by Parts failed.
+step 109:                                     [depth 18] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 110:                                       [depth 19] Integrating expression: ((1/cos((2*x)))^2)
+step 111:                                       [depth 19] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 112:                                       [depth 19] U-Substitution failed.
+step 113:                                       [depth 19] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 114:                                       [depth 19] Integration by Parts failed.
+step 115:                                       [depth 19] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 116:                                         [depth 20] Integrating expression: ((1/cos((2*x)))^2)
+step 117:                                         [depth 20] Attempting U-Substitution on ((1/cos((2*x)))^2)
+step 118:                                         [depth 20] U-Substitution failed.
+step 119:                                         [depth 20] Attempting Integration by Parts on ((1/cos((2*x)))^2)
+step 120:                                         [depth 20] Integration by Parts failed.
+step 121:                                         [depth 20] Recursively integrating sub-term: ((1/cos((2*x)))^2)
+step 122:                                           [depth 21] Integrating expression: ((1/cos((2*x)))^2)
+step 123:                                           [depth 21] Recursion depth limit reached (20). Returning integral unsolved.
+step 124:                                         [depth 20] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 125:                                         [depth 20] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 126:                                       [depth 19] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 127:                                       [depth 19] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 128:                                     [depth 18] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 129:                                     [depth 18] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 130:                                   [depth 17] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 131:                                   [depth 17] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 132:                                 [depth 16] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 133:                                 [depth 16] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 134:                               [depth 15] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 135:                               [depth 15] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 136:                             [depth 14] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 137:                             [depth 14] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 138:                           [depth 13] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 139:                           [depth 13] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 140:                         [depth 12] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 141:                         [depth 12] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 142:                       [depth 11] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 143:                       [depth 11] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 144:                     [depth 10] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 145:                     [depth 10] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 146:                   [depth 9] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 147:                   [depth 9] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 148:                 [depth 8] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 149:                 [depth 8] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 150:               [depth 7] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 151:               [depth 7] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 152:             [depth 6] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 153:             [depth 6] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 154:           [depth 5] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 155:           [depth 5] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 156:         [depth 4] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 157:         [depth 4] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 158:       [depth 3] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 159:       [depth 3] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 160:     [depth 2] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 161:     [depth 2] Final integration result: ∫dx(((1/cos((2*x)))^2))
+step 162:   [depth 1] Integral is structurally equivalent to its unsolved form. Halting sub-recursion.
+step 163: [depth 0] Final integration result: ∫dx(((1/cos((2*x)))^2))

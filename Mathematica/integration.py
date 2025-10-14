@@ -350,7 +350,12 @@ if __name__ == "__main__":
     print("\n=== Integration Debug Harness (Hierarchical Logger) ===\n")
 
     x = Var("x")
+    # Note: You may need to import Sinh, ArcTan, etc. from rules.py if they aren't already.
+
     tests = [
+        # ----------------------------------------------------------------------
+        # --- ORIGINAL (PASSED) TESTS ---
+        # ----------------------------------------------------------------------
         (
             "Combined (x*e^x + cos(x^2)*2x)",
             Add(
@@ -370,18 +375,111 @@ if __name__ == "__main__":
         ),
 
         (
-            # This test passed in your previous output
             "IBP Nested: x^2 * e^x",
             Mul(Pow(x, Const(2)), Exp(x))
         ),
 
         (
-            # This is likely the 'other ln test' causing problems
             "Log Rule variant (2x/(x^2+3))",
             Div(Mul(Const(2), x), Add(Pow(x, Const(2)), Const(3)))
         ),
-    ]
 
+        # ----------------------------------------------------------------------
+        # --- NEW BASIC RULES & POWER RULE TESTS ---
+        # ----------------------------------------------------------------------
+        (
+            # ∫ 5 dx = 5x
+            "Basic: Constant (5)",
+            Const(5)
+        ),
+        (
+            # ∫ x^3 dx = x^4 / 4
+            "Basic: Power Rule (x^3)",
+            Pow(x, Const(3))
+        ),
+        (
+            # ∫ 1/x^3 dx = ∫ x^-3 dx = -1/(2x^2)
+            "Basic: Negative Power (1/x^3)",
+            Div(Const(1), Pow(x, Const(3)))
+        ),
+        (
+            # ∫ 1/sqrt(x) dx = ∫ x^-0.5 dx = 2*sqrt(x)
+            "Basic: Fractional Power (1/sqrt(x))",
+            Pow(x, Div(Const(-1), Const(2)))
+        ),
+        (
+            # ∫ cos(x) dx = sin(x)
+            "Basic: Simple Trig (cos(x))",
+            Cos(x)
+        ),
+
+        # ----------------------------------------------------------------------
+        # --- NEW INTEGRATION BY PARTS (IBP) TESTS ---
+        # ----------------------------------------------------------------------
+        (
+            # ∫ x * e^x dx = x*e^x - e^x
+            "IBP Simple: x*e^x (Standalone)",
+            Mul(x, Exp(x))
+        ),
+        (
+            # ∫ ln(x) dx = x*ln(x) - x
+            "IBP Log: ln(x)",
+            Log(x)
+        ),
+        (
+            # ∫ x * cos(x) dx = x*sin(x) + cos(x)
+            "IBP Simple: x*cos(x)",
+            Mul(x, Cos(x))
+        ),
+        
+        # ----------------------------------------------------------------------
+        # --- NEW U-SUBSTITUTION TESTS ---
+        # ----------------------------------------------------------------------
+        (
+            # ∫ e^(3x) dx = 1/3 * e^(3x) (Linear U-Sub)
+            "U-Sub: Linear Exponential (e^3x)",
+            Exp(Mul(Const(3), x))
+        ),
+        (
+            # ∫ x/(x^2+1) dx = 1/2 * ln(x^2+1) (Missing Constant Log Rule)
+            "U-Sub: Missing Factor Log (x/(x^2+1))",
+            Div(x, Add(Pow(x, Const(2)), Const(1)))
+        ),
+        (
+            # ∫ cos^3(x)*sin(x) dx = -1/4 * cos^4(x)
+            "U-Sub: Trig Power (cos^3(x)*sin(x))",
+            Mul(Pow(Cos(x), Const(3)), Sin(x))
+        ),
+        (
+            # ∫ 1/((x+1)^(0.5)) dx = 2*sqrt(x+1)
+            "U-Sub: Complex Fractional Power",
+            Pow(Add(x, Const(1)), Div(Const(-1), Const(2)))
+        ),
+        (
+            # ∫ (ln(x))/x dx = 1/2 * ln(x)^2
+            "U-Sub: Nested Log Power (ln(x)/x)",
+            Div(Log(x), x)
+        ),
+        
+        # ----------------------------------------------------------------------
+        # --- NEW SPECIAL FUNCTION TESTS ---
+        # ----------------------------------------------------------------------
+        (
+            # ∫ 1/(1+x^2) dx = arctan(x) (Requires the arctan rule)
+            "Special: Inverse Trig (1/(1+x^2))",
+            Div(Const(1), Add(Const(1), Pow(x, Const(2))))
+        ),
+        (
+            # ∫ sinh(x) dx = cosh(x) (Requires Hyperbolic rule)
+            "Basic: Hyperbolic (sinh(x))",
+            Sinh(x) # Requires 'from rules import Sinh' or similar
+        ),
+        (
+            # ∫ sec^2(2x) dx = 1/2 * tan(2x) (U-Sub on standard rule)
+            "U-Sub: Trig Identity (sec^2(2x))",
+            Pow(Sec(Mul(Const(2), x)), Const(2)) # Requires 'from rules import Sec'
+        ),
+    ]
     for name, expr in tests:
         reset_log()
         print(f"▶ {name}")
