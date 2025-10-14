@@ -1,12 +1,12 @@
 # ============================================================
-# integration.py — Hierarchical Integration Engine
+# integration.py — Hierarchical Integration Engine (FIXED)
 # ============================================================
 
 from rules import *
 from simplification import *
 from differentiation import differentiate
 from equality import check_equal
-from logger import log_step, reset_log, get_step_counter, LOG_FILE, push_depth, pop_depth
+from logger import log_step, reset_log, get_step_counter, LOG_FILE, push_depth, pop_depth, get_depth # Added get_depth
 from typing import Optional
 
 
@@ -51,6 +51,23 @@ def integration_rules(var: str) -> list[tuple[Expr, Expr]]:
 # ------------------------------------------------------------
 # U-Substitution
 # ------------------------------------------------------------
+
+def robust_constant_ratio(numerator: Expr, denominator: Expr, var: Var) -> Optional[Const]:
+    """Calculates the ratio k = numerator / denominator and returns it as a Const if k is a constant."""
+    # 1. Try general rewrite/simplification
+    ratio = Div(numerator, denominator)
+    k_const = rewrite(ratio, simplification_rules())
+    if isinstance(k_const, Const):
+        return k_const
+
+    # 2. Robust check for variable cancellation (e.g., x / (c * x) -> 1/c)
+    if isinstance(numerator, Var) and numerator.name == var.name:
+        if isinstance(denominator, Mul) and isinstance(denominator.right, Var) and denominator.right.name == var.name and isinstance(denominator.left, Const):
+            # Form is x / (c * x)
+            return Div(Const(1), denominator.left)
+        
+    return None
+
 def try_u_substitution(integrand: Expr, var: Var) -> Optional[Expr]:
     v = var
     log_step(f"Attempting U-Substitution on {integrand}")
@@ -63,16 +80,12 @@ def try_u_substitution(integrand: Expr, var: Var) -> Optional[Expr]:
             log_step(f"U-Sub success (log rule): u = {u}")
             return Log(u)
 
-        # --- proportional u'-multiplier check (new) ---
-        try:
-            ratio = Div(integrand.left, u_prime)
-            simplified_ratio = rewrite(ratio, simplification_rules())
-            if isinstance(simplified_ratio, Const):
-                k = simplified_ratio.value
-                log_step(f"Proportional U-Sub detected (log rule): scaled by {k}")
-                return Mul(Const(k), Log(u))
-        except Exception:
-            pass
+        # proportional u'-multiplier check
+        k_const = robust_constant_ratio(integrand.left, u_prime, v)
+        if isinstance(k_const, Const):
+            k = k_const.value
+            log_step(f"Proportional U-Sub detected (log rule): scaled by {k}")
+            return Mul(Const(k), Log(u))
 
     # --- f(u)*u' case ---
     if isinstance(integrand, Mul):
@@ -86,21 +99,18 @@ def try_u_substitution(integrand: Expr, var: Var) -> Optional[Expr]:
                 u = f_u_candidate.base
                 n = f_u_candidate.exp
                 u_prime = differentiate(u, v.name)
+                
                 if check_equal(du_candidate, u_prime):
                     log_step(f"U-Sub success (power rule): u = {u}")
                     return Div(Pow(u, Add(n, Const(1))), Add(n, Const(1)))
 
                 # proportional u' check
-                try:
-                    ratio = Div(du_candidate, u_prime)
-                    simplified_ratio = rewrite(ratio, simplification_rules())
-                    if isinstance(simplified_ratio, Const):
-                        k = simplified_ratio.value
-                        log_step(f"Proportional U-Sub detected (power rule): scaled by {k}")
-                        return Mul(Const(k),
-                                   Div(Pow(u, Add(n, Const(1))), Add(n, Const(1))))
-                except Exception:
-                    pass
+                k_const = robust_constant_ratio(du_candidate, u_prime, v)
+                if isinstance(k_const, Const):
+                    k = k_const.value
+                    log_step(f"Proportional U-Sub detected (power rule): scaled by {k}")
+                    return Mul(Const(k),
+                                Div(Pow(u, Add(n, Const(1))), Add(n, Const(1))))
 
             # Cosine
             if isinstance(f_u_candidate, Cos):
@@ -111,15 +121,11 @@ def try_u_substitution(integrand: Expr, var: Var) -> Optional[Expr]:
                     return Sin(u)
 
                 # proportional check
-                try:
-                    ratio = Div(du_candidate, u_prime)
-                    simplified_ratio = rewrite(ratio, simplification_rules())
-                    if isinstance(simplified_ratio, Const):
-                        k = simplified_ratio.value
-                        log_step(f"Proportional U-Sub detected (cos rule): scaled by {k}")
-                        return Mul(Const(k), Sin(u))
-                except Exception:
-                    pass
+                k_const = robust_constant_ratio(du_candidate, u_prime, v)
+                if isinstance(k_const, Const):
+                    k = k_const.value
+                    log_step(f"Proportional U-Sub detected (cos rule): scaled by {k}")
+                    return Mul(Const(k), Sin(u))
 
             # Sine
             if isinstance(f_u_candidate, Sin):
@@ -130,15 +136,11 @@ def try_u_substitution(integrand: Expr, var: Var) -> Optional[Expr]:
                     return Neg(Cos(u))
 
                 # proportional check
-                try:
-                    ratio = Div(du_candidate, u_prime)
-                    simplified_ratio = rewrite(ratio, simplification_rules())
-                    if isinstance(simplified_ratio, Const):
-                        k = simplified_ratio.value
-                        log_step(f"Proportional U-Sub detected (sin rule): scaled by {k}")
-                        return Mul(Const(k), Neg(Cos(u)))
-                except Exception:
-                    pass
+                k_const = robust_constant_ratio(du_candidate, u_prime, v)
+                if isinstance(k_const, Const):
+                    k = k_const.value
+                    log_step(f"Proportional U-Sub detected (sin rule): scaled by {k}")
+                    return Mul(Const(k), Neg(Cos(u)))
 
             # Exponential
             if isinstance(f_u_candidate, Exp):
@@ -149,15 +151,11 @@ def try_u_substitution(integrand: Expr, var: Var) -> Optional[Expr]:
                     return Exp(u)
 
                 # proportional check
-                try:
-                    ratio = Div(du_candidate, u_prime)
-                    simplified_ratio = rewrite(ratio, simplification_rules())
-                    if isinstance(simplified_ratio, Const):
-                        k = simplified_ratio.value
-                        log_step(f"Proportional U-Sub detected (exp rule): scaled by {k}")
-                        return Mul(Const(k), Exp(u))
-                except Exception:
-                    pass
+                k_const = robust_constant_ratio(du_candidate, u_prime, v)
+                if isinstance(k_const, Const):
+                    k = k_const.value
+                    log_step(f"Proportional U-Sub detected (exp rule): scaled by {k}")
+                    return Mul(Const(k), Exp(u))
 
     log_step("U-Substitution failed.")
     return None
@@ -173,12 +171,22 @@ def try_integration_by_parts(integrand: Expr, var: Var) -> Optional[Expr]:
     if isinstance(integrand, Mul):
         for u_candidate, dv_candidate in [(integrand.left, integrand.right),
                                           (integrand.right, integrand.left)]:
-            if check_equal(u_candidate, v):
+            
+            # General IBP Rule (u * dv where dv is Exp/Sin/Cos)
+            if isinstance(dv_candidate, (Exp, Sin, Cos)):
                 u = u_candidate
                 dv = dv_candidate
+                du = differentiate(u_candidate, v.name)
+                
+                # FIX: Generalized check for 'u' to include any linear term (c*x) 
+                # or a higher-order polynomial (x^n) that we want to reduce.
+                is_linear_u = isinstance(du, Const)
+                is_higher_poly_u = (isinstance(u, Pow) and 
+                                    isinstance(u.base, Var) and 
+                                    isinstance(u.exp, Const) and 
+                                    u.exp.value >= 1)
 
-                if isinstance(dv, (Exp, Sin, Cos)):
-                    du = differentiate(u, v.name)
+                if is_linear_u or is_higher_poly_u:
                     log_step(f"IBP: u={u}, dv={dv}, du={du}")
 
                     push_depth()
@@ -191,30 +199,14 @@ def try_integration_by_parts(integrand: Expr, var: Var) -> Optional[Expr]:
                         uv = Mul(u, v_expr)
                         v_du = Mul(v_expr, du)
 
+                        # Recursively integrate the remaining term (which may require a second IBP)
                         push_depth()
                         integral_v_du = integrate(v_du, v.name, reset=False)
                         pop_depth()
 
-                        if not isinstance(integral_v_du, Integrate):
-                            log_step(f"IBP success: u={u}, v={v_expr}")
-                            return Sub(uv, integral_v_du)
-
-    # --- recursive IBP rule for x^n * e^x ---
-    if isinstance(integrand, Mul) and isinstance(integrand.left, Pow):
-        base, exp = integrand.left.base, integrand.left.exp
-        if isinstance(base, Var) and isinstance(exp, Const) and isinstance(integrand.right, Exp):
-            n = exp.value
-            if n > 1:
-                log_step(f"Recursive IBP detected: x^{n} * e^x")
-                u = integrand.left
-                dv = integrand.right
-                du = differentiate(u, v.name)
-                v_expr = integrate(dv, v.name, reset=False)
-                term1 = Mul(u, v_expr)
-                term2 = Mul(v_expr, du)
-                sub_integral = integrate(term2, v.name, reset=False)
-                return Sub(term1, sub_integral)
-
+                        # Return IBP result regardless of whether the second integral was solved
+                        return Sub(uv, integral_v_du)
+                        
     log_step("Integration by Parts failed.")
     return None
 
@@ -227,6 +219,17 @@ def integrate(expr: Expr, var: str, reset: bool = True) -> Expr:
     log_step(f"Integrating expression: {expr}")
 
     push_depth()
+
+    # CRITICAL FIX: Limit recursion depth to prevent stack overflow on looping integrals
+    if get_depth() > 20: 
+        log_step("Recursion depth limit reached (20). Returning integral unsolved.")
+        pop_depth()
+        # Return the expression wrapped in Integrate if it's not already one
+        if isinstance(expr, Integrate):
+            return expr
+        else:
+            return Integrate(expr, v)
+
 
     # 1. Try U-Substitution first
     u_sub_result = try_u_substitution(expr, v)
@@ -243,7 +246,11 @@ def integrate(expr: Expr, var: str, reset: bool = True) -> Expr:
         return rewrite(ibp_result, simplification_rules())
 
     # 3. Fallback: rule-based rewrite
-    result = Integrate(expr, v)
+    if isinstance(expr, Integrate):
+        result = expr
+    else:
+        result = Integrate(expr, v)
+        
     prev = None
     while prev != repr(result):
         prev = repr(result)
@@ -251,18 +258,50 @@ def integrate(expr: Expr, var: str, reset: bool = True) -> Expr:
         result = rewrite(result, simplification_rules())
 
     # 4. Recursively resolve remaining sub-integrals
-    if isinstance(result, Add):
-        new_terms = []
-        for term in [result.left, result.right]:
-            if isinstance(term, Integrate):
-                log_step(f"Recursively integrating sub-term: {term.expr}")
-                push_depth()
-                new_terms.append(integrate(term.expr, var, reset=False))
-                pop_depth()
+    def resolve_sub_integrals(expr: Expr) -> Expr:
+        # Base Case: Integrate node
+        if isinstance(expr, Integrate):
+            log_step(f"Recursively integrating sub-term: {expr.expr}")
+            original_integrand = expr.expr
+            
+            push_depth() 
+            solved_expr = integrate(original_integrand, var, reset=False)
+            pop_depth()
+            
+            # If the result of the recursive call is still an Integrate 
+            # with the original integrand, it means no progress was made. 
+            # Return the ORIGINAL Integrate node to stop the loop.
+            if isinstance(solved_expr, Integrate) and check_equal(solved_expr.expr, original_integrand):
+                 log_step("Integral is structurally equivalent to its unsolved form. Halting sub-recursion.")
+                 return expr
+            
+            return solved_expr
+        
+        # Recursive Step: Apply to children of all other expression types
+        fields = getattr(expr, "__dataclass_fields__", {})
+        field_names = list(fields.keys())
+        
+        new_args = []
+        changed = False
+        
+        for name in field_names:
+            val = getattr(expr, name)
+            if isinstance(val, Expr):
+                new_val = resolve_sub_integrals(val)
+                if new_val != val:
+                    changed = True
+                new_args.append(new_val)
             else:
-                new_terms.append(term)
-        result = Add(*new_terms)
+                new_args.append(val)
+                
+        return type(expr)(*new_args) if changed else expr
 
+    # Apply the recursive resolver to the current result
+    result = resolve_sub_integrals(result)
+    
+    # Clean up after recursion
+    result = rewrite(result, simplification_rules()) 
+    
     pop_depth()
     log_step(f"Final integration result: {result}")
     return result
@@ -272,7 +311,9 @@ def integrate(expr: Expr, var: str, reset: bool = True) -> Expr:
 # DEBUG HARNESS
 # ------------------------------------------------------------
 if __name__ == "__main__":
-    reset_log()
+    # NOTE: You will need to import 'get_depth' into logger.py for this to run
+    # from logger import log_step, reset_log, get_step_counter, LOG_FILE, push_depth, pop_depth, get_depth
+    
     print("\n=== Integration Debug Harness (Hierarchical Logger) ===\n")
 
     x = Var("x")
@@ -297,6 +338,7 @@ if __name__ == "__main__":
     ]
 
     for name, expr in tests:
+        reset_log()
         print(f"▶ {name}")
         print(f"Input : {expr}")
         result = integrate(expr, "x")
