@@ -1,1 +1,7 @@
-step 1: d/dx(x) -> 1 on d/dx(x)
+step 1: [depth 0] d/dx((?u^?n)) -> (?n*((?u^(?n-1))*d/dx(?u))) on d/dx((x^2))
+step 2: [depth 0] d/dx(x) -> 1 on d/dx(x)
+step 3: [depth 0] (?x*1) -> ?x on ((x^1)*1)
+step 4: [depth 0] (?x^1) -> ?x on (x^1)
+step 5: [depth 0] U-Sub success (cos rule): u = (x^2)
+step 6: [depth 0] Returning from U-Substitution: sin((x^2))
+step 7: [depth 0] Final integration result: (((x*exp(x))-exp(x))+sin((x^2)))
