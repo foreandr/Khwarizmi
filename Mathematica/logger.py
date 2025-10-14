@@ -32,7 +32,7 @@ def get_depth():
 
 # ---------------- Step Logging ----------------
 
-def log_step(description: str):
+def log_step(description: str, printout=False):
     """Record a single log step with indentation according to recursion depth."""
     global STEP_COUNTER
     STEP_COUNTER += 1
@@ -48,30 +48,30 @@ def log_step(description: str):
         print(f"[Logger Error] Could not write to log: {e}", file=sys.stderr)
 
     # Print to console — also handle Unicode safely
-    try:
-        print(f"step {STEP_COUNTER}: {indent}{message}")
-    except UnicodeEncodeError:
-        safe_msg = message.encode("ascii", "replace").decode()
-        print(f"step {STEP_COUNTER}: {indent}{safe_msg}")
+    if printout:
+        try:
+            print(f"step {STEP_COUNTER}: {indent}{message}")
+        except UnicodeEncodeError:
+            safe_msg = message.encode("ascii", "replace").decode()
+            print(f"step {STEP_COUNTER}: {indent}{safe_msg}")
 
 
 def reset_log():
     """Reset the step counter and clear the log file."""
     global STEP_COUNTER, DEPTH
-    
-    # --- New code for the stylized print ---
-    RED, GREEN, YELLOW, RESET = "\033[91m", "\033[92m", "\033[93m", "\033[0m"
-    
-    print(f"\n{RED}="*40)
-    print(f"{RED}* {YELLOW}LOG AND STEP COUNTER RESET INITIATED{RED} *")
-    print(f"{RED}* {GREEN}STARTING A CLEAN TEST RUN NOW!{RED}      *")
-    print(f"{RED}="*40 + RESET)
-    # -------------------------------------
-    
+
+    # --- Stylized reset banner in PURPLE ---
+    PURPLE, GREEN, YELLOW, RESET = "\033[95m", "\033[92m", "\033[93m", "\033[0m"
+    print(f"{PURPLE}* {YELLOW}LOG AND STEP COUNTER RESET INITIATED{PURPLE} *")
+    print(f"{PURPLE}* {GREEN}STARTING A CLEAN TEST RUN NOW!{PURPLE}      *")
+    print(f"{PURPLE}=" * 40 + RESET)
+    # ---------------------------------------
+
     STEP_COUNTER = 0
     DEPTH = 0
     with open(LOG_FILE, "w", encoding="utf-8") as f:
         f.write("")
+
 
 
 def get_step_counter() -> int:

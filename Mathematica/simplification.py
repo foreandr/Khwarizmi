@@ -86,4 +86,16 @@ def simplification_rules() -> List[Tuple[Expr, Expr]]:
             Mul(Div(Const(1), Cos(PatternVar("u"))), Tan(PatternVar("u")))
         ),
 
+        # ---------- Log/Exp identities ----------
+        (Exp(Log(PatternVar("x"))), PatternVar("x")),  # exp(log(x)) -> x
+        (Log(Exp(PatternVar("x"))), PatternVar("x")),  # log(exp(x)) -> x
+        (Log(Const(math.e)), Const(1)),                # ln(e) -> 1
+
+        # ---------- Power/Reciprocal identities ----------
+        (Div(Const(1), Pow(PatternVar("x"), PatternVar("n"))),
+         Pow(PatternVar("x"), Neg(PatternVar("n")))),  # 1/x^n -> x^-n
+        (Pow(PatternVar("x"), Const(-1)), Div(Const(1), PatternVar("x"))),  # x^-1 -> 1/x
+        (Div(PatternVar("x"), PatternVar("x")), Const(1)),  # x/x -> 1
+
+
     ]

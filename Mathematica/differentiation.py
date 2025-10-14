@@ -3,6 +3,7 @@
 # ============================================================
 from rules import *
 from simplification import *
+
 def differentiate(expr: Expr, var: str) -> Expr:
     v = Var(var)
     
