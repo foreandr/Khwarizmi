@@ -1,1 +1,1 @@
-step 1: ∫dx((1/(1+(x^2)))) -> arctan(x) on ∫dx((1/(1+(x^2))))
+step 1: d/dx(x) -> 1 on d/dx(x)
