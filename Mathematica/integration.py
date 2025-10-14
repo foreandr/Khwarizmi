@@ -37,6 +37,14 @@ def integration_rules(var: str) -> list[tuple[Expr, Expr]]:
         (Integrate(Exp(v), v), Exp(v)),
         (Integrate(Cos(v), v), Sin(v)),
         (Integrate(Sin(v), v), Neg(Cos(v))),
+
+        # --- Hyperbolic-type substitution rule ---
+        (Integrate(Div(Var(var),
+                       Pow(Add(Pow(Var(var), Const(2)), Const(PatternVar("a2"))),
+                           Div(Const(1), Const(2)))),
+                   Var(var)),
+         Pow(Add(Pow(Var(var), Const(2)), Const(PatternVar("a2"))),
+             Div(Const(1), Const(2)))),
     ]
 
 
@@ -55,6 +63,17 @@ def try_u_substitution(integrand: Expr, var: Var) -> Optional[Expr]:
             log_step(f"U-Sub success (log rule): u = {u}")
             return Log(u)
 
+        # --- proportional u'-multiplier check (new) ---
+        try:
+            ratio = Div(integrand.left, u_prime)
+            simplified_ratio = rewrite(ratio, simplification_rules())
+            if isinstance(simplified_ratio, Const):
+                k = simplified_ratio.value
+                log_step(f"Proportional U-Sub detected (log rule): scaled by {k}")
+                return Mul(Const(k), Log(u))
+        except Exception:
+            pass
+
     # --- f(u)*u' case ---
     if isinstance(integrand, Mul):
         for f_u_candidate, du_candidate in [(integrand.left, integrand.right),
@@ -71,6 +90,18 @@ def try_u_substitution(integrand: Expr, var: Var) -> Optional[Expr]:
                     log_step(f"U-Sub success (power rule): u = {u}")
                     return Div(Pow(u, Add(n, Const(1))), Add(n, Const(1)))
 
+                # proportional u' check
+                try:
+                    ratio = Div(du_candidate, u_prime)
+                    simplified_ratio = rewrite(ratio, simplification_rules())
+                    if isinstance(simplified_ratio, Const):
+                        k = simplified_ratio.value
+                        log_step(f"Proportional U-Sub detected (power rule): scaled by {k}")
+                        return Mul(Const(k),
+                                   Div(Pow(u, Add(n, Const(1))), Add(n, Const(1))))
+                except Exception:
+                    pass
+
             # Cosine
             if isinstance(f_u_candidate, Cos):
                 u = f_u_candidate.arg
@@ -78,6 +109,17 @@ def try_u_substitution(integrand: Expr, var: Var) -> Optional[Expr]:
                 if check_equal(du_candidate, u_prime):
                     log_step(f"U-Sub success (cos rule): u = {u}")
                     return Sin(u)
+
+                # proportional check
+                try:
+                    ratio = Div(du_candidate, u_prime)
+                    simplified_ratio = rewrite(ratio, simplification_rules())
+                    if isinstance(simplified_ratio, Const):
+                        k = simplified_ratio.value
+                        log_step(f"Proportional U-Sub detected (cos rule): scaled by {k}")
+                        return Mul(Const(k), Sin(u))
+                except Exception:
+                    pass
 
             # Sine
             if isinstance(f_u_candidate, Sin):
@@ -87,6 +129,17 @@ def try_u_substitution(integrand: Expr, var: Var) -> Optional[Expr]:
                     log_step(f"U-Sub success (sin rule): u = {u}")
                     return Neg(Cos(u))
 
+                # proportional check
+                try:
+                    ratio = Div(du_candidate, u_prime)
+                    simplified_ratio = rewrite(ratio, simplification_rules())
+                    if isinstance(simplified_ratio, Const):
+                        k = simplified_ratio.value
+                        log_step(f"Proportional U-Sub detected (sin rule): scaled by {k}")
+                        return Mul(Const(k), Neg(Cos(u)))
+                except Exception:
+                    pass
+
             # Exponential
             if isinstance(f_u_candidate, Exp):
                 u = f_u_candidate.arg
@@ -94,6 +147,17 @@ def try_u_substitution(integrand: Expr, var: Var) -> Optional[Expr]:
                 if check_equal(du_candidate, u_prime):
                     log_step(f"U-Sub success (exp rule): u = {u}")
                     return Exp(u)
+
+                # proportional check
+                try:
+                    ratio = Div(du_candidate, u_prime)
+                    simplified_ratio = rewrite(ratio, simplification_rules())
+                    if isinstance(simplified_ratio, Const):
+                        k = simplified_ratio.value
+                        log_step(f"Proportional U-Sub detected (exp rule): scaled by {k}")
+                        return Mul(Const(k), Exp(u))
+                except Exception:
+                    pass
 
     log_step("U-Substitution failed.")
     return None
@@ -134,6 +198,22 @@ def try_integration_by_parts(integrand: Expr, var: Var) -> Optional[Expr]:
                         if not isinstance(integral_v_du, Integrate):
                             log_step(f"IBP success: u={u}, v={v_expr}")
                             return Sub(uv, integral_v_du)
+
+    # --- recursive IBP rule for x^n * e^x ---
+    if isinstance(integrand, Mul) and isinstance(integrand.left, Pow):
+        base, exp = integrand.left.base, integrand.left.exp
+        if isinstance(base, Var) and isinstance(exp, Const) and isinstance(integrand.right, Exp):
+            n = exp.value
+            if n > 1:
+                log_step(f"Recursive IBP detected: x^{n} * e^x")
+                u = integrand.left
+                dv = integrand.right
+                du = differentiate(u, v.name)
+                v_expr = integrate(dv, v.name, reset=False)
+                term1 = Mul(u, v_expr)
+                term2 = Mul(v_expr, du)
+                sub_integral = integrate(term2, v.name, reset=False)
+                return Sub(term1, sub_integral)
 
     log_step("Integration by Parts failed.")
     return None
@@ -198,14 +278,28 @@ if __name__ == "__main__":
     x = Var("x")
     tests = [
         ("Combined (x*e^x + cos(x^2)*2x)",
-         Add(Mul(x, Exp(x)), Mul(Cos(Pow(x, Const(2))), Mul(Const(2), x)))),
+        Add(Mul(x, Exp(x)), Mul(Cos(Pow(x, Const(2))), Mul(Const(2), x)))),
+
+        ("U-Sub: Missing constant factor (x*e^(x^2))",
+        Mul(x, Exp(Pow(x, Const(2))))),
+
+        ("U-Sub: sin(x^2)*2x",
+        Mul(Sin(Pow(x, Const(2))), Mul(Const(2), x))),
+
+        ("IBP Nested: x^2 * e^x",
+        Mul(Pow(x, Const(2)), Exp(x))),
+
+        ("Log Rule variant (2x/(x^2+3))",
+        Div(Mul(Const(2), x), Add(Pow(x, Const(2)), Const(3)))),
+
+        ("Future: hyperbolic sqrt(x^2+1) substitution",
+        Div(x, Pow(Add(Pow(x, Const(2)), Const(1)), Div(Const(1), Const(2))))),
     ]
 
     for name, expr in tests:
         print(f"▶ {name}")
         print(f"Input : {expr}")
         result = integrate(expr, "x")
-        # input("--")
         print(f"Output: {result}")
         print(f"Total rewrite steps logged: {get_step_counter()}")
         print(f"Log written to: {LOG_FILE}")
