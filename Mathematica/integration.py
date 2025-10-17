@@ -104,23 +104,24 @@ if __name__ == "__main__":
 
 
     tests = [
-
         # ----------------------------------------------------------------------
-
-        # --- PREVIOUSLY FAILED TESTS ---
-
+        # --- POLYNOMIAL CASES (Fixed and Confirmed) ---
         # ----------------------------------------------------------------------
-
         (
-
             "Basic: Negative Power (1/x^3)",
-
-            Div(Const(1), Pow(x, Const(3)))
-            
-
+            Div(Const(1), Pow(x, Const(3))) # Expected: Div(Pow(x, Const(-2)), Const(-2))
+        ),
+        (
+            "Basic: Log Rule (1/x)",
+            Div(Const(1), x) # Expected: Log(Abs(x))
+        ),
+        # ----------------------------------------------------------------------
+        # --- NEXT CRITICAL TEST (U-SUB Strategy Check) ---
+        # ----------------------------------------------------------------------
+        (
+            "Trig: Linear U-Sub (cos(2x))",
+            Cos(Mul(Const(2), x)) # Expected: Div(Sin(Mul(Const(2), x)), Const(2))
         )
-        
-
     ]
 
 
