@@ -1,8 +1,8 @@
-step 1: [depth 0] Starting ODE solver for ODE: (dy/dx-(x+(y^2))) = 0
+step 1: [depth 0] Starting ODE solver for ODE: (dy/dx-(x+(y^2)))=0
 step 2: [depth 0] Normalizing ODE: solving for dy/dx
 step 3: [depth 0] (?x/1) -> ?x on ((-(-(x+(y^2))))/1)
 step 4: [depth 0] (-(-?x)) -> ?x on (-(-(x+(y^2))))
 step 5: [depth 0] Decomposition: M=(-(x+(y^2))), N=1
 step 6: [depth 0] Normalized RHS f(x,y): (x+(y^2))
-step 7: [depth 0] Normalized explicit form: dy/dx = (x+(y^2))
+step 7: [depth 0] Normalized explicit form: dy/dx=(x+(y^2))
 step 8: [depth 0] ODE classified as: General
