@@ -1,6 +1,15 @@
-step 1: [depth 0] Integrating expression: cos((2*x))
-step 2:   [depth 1] Attempting U-Substitution on cos((2*x))
-step 3:   [depth 1] d/dx((?c*?u)) -> (?c*d/dx(?u)) on d/dx((2*x))
-step 4:   [depth 1] d/dx(x) -> 1 on d/dx(x)
-step 5:   [depth 1] Linear U-Sub detected: u=(2*x), u'=2, scaled by 0.5
-step 6:   [depth 1] U-Substitution successful: (0.5*sin((2*x)))
+step 1: [depth 0] Starting ODE solver for ODE: (dy/dx+((3*(x^2))+exp((2*x)))) = 0
+step 2: [depth 0] Normalizing ODE: solving for dy/dx
+step 3: [depth 0] (?x/1) -> ?x on ((-((3*(x^2))+exp((2*x))))/1)
+step 4: [depth 0] Decomposition: M=((3*(x^2))+exp((2*x))), N=1
+step 5: [depth 0] Normalized RHS f(x,y): (-((3*(x^2))+exp((2*x))))
+step 6: [depth 0] Normalized explicit form: dy/dx = (-((3*(x^2))+exp((2*x))))
+step 7: [depth 0] ODE classified as: Separable-f(x)
+step 8: [depth 0] Solving ODE using: Direct Integration (∫ f(x) dx + C)
+step 9: [depth 0] Integrating expression: (-((3*(x^2))+exp((2*x))))
+step 10:   [depth 1] ∫dx((-?u)) -> (-∫dx(?u)) on ∫dx((-((3*(x^2))+exp((2*x)))))
+step 11:   [depth 1] ∫dx((?u+?w)) -> (∫dx(?u)+∫dx(?w)) on ∫dx(((3*(x^2))+exp((2*x))))
+step 12:   [depth 1] ∫dx((?c*?u)) -> (?c*∫dx(?u)) on ∫dx((3*(x^2)))
+step 13:   [depth 1] ∫dx((x^?n)) -> ((x^(?n+1))/(?n+1)) on ∫dx((x^2))
+step 14:   [depth 1] ∫dx(exp((?c*x))) -> ((1/?c)*exp((?c*x))) on ∫dx(exp((2*x)))
+step 15:   [depth 1] [Direct Rule Success] Antiderivative found: (-((3*((x^3)/3))+(0.5*exp((2*x)))))

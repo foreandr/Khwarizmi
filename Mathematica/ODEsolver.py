@@ -1,0 +1,212 @@
+# ODEsolver.py (FINAL FIXED VERSION with Separable-f(x) solver)
+
+from rules import Var, Const, Add, Mul, Pow, Exp, Log, Sin, Cos, Sub, Div, Neg, Expr 
+from integration import integrate
+from ODEclassifier import classify_first_order
+from utils import is_independent_of # CRITICAL: Needed for decomposition
+from logger import reset_log, log_step, get_step_counter, LOG_FILE 
+from simplification import rewrite, simplification_rules, evaluate_constants
+
+# New symbolic class to represent the derivative dy/dx.
+class DyDx(Expr):
+    """Represents the first derivative dy/dx."""
+    def __init__(self, var: str = "y", wrt: str = "x"):
+        self.var = Var(var)
+        self.wrt = Var(wrt)
+    def children(self): return [self.var, self.wrt]
+    def __repr__(self): return f"d{self.var}/d{self.wrt}"
+    # Use repr() for equality check because DyDx doesn't have child nodes that need recursive checking
+    def __eq__(self, other):
+        return isinstance(other, DyDx) and repr(self) == repr(other)
+    
+# Helper function to extract and flatten additive terms.
+def flatten_ode_terms(expr):
+    """Flattens the ODE expression (LHS = 0) into a list of additive terms."""
+    terms = []
+    
+    # Base Cases: DyDx is now treated as a factor, not just a leaf.
+    if isinstance(expr, DyDx):
+        return [expr]
+    if not isinstance(expr, (Add, Sub, Neg)):
+        return [expr]
+    
+    # Recursive Cases
+    if isinstance(expr, Add):
+        terms.extend(flatten_ode_terms(expr.left))
+        terms.extend(flatten_ode_terms(expr.right))
+    elif isinstance(expr, Sub):
+        # A - B is treated as A + (-B)
+        terms.extend(flatten_ode_terms(expr.left))
+        
+        # Negate the right term for Subtraction
+        right_negated = Neg(expr.right)
+        right_negated = rewrite(right_negated, simplification_rules())
+        right_negated = evaluate_constants(right_negated)
+        terms.append(right_negated)
+    elif isinstance(expr, Neg):
+        # Handle standalone Negations from earlier steps
+        terms.append(expr)
+
+    return terms
+
+
+def normalize_ode(ode_expr: Expr, dy_dx_marker: DyDx, x_var: str) -> tuple[Expr, Expr, Expr]:
+    """
+    Takes an ODE expression set to zero, and algebraically solves for dy/dx.
+    Transforms F(y', x, y) = 0 into M(x,y) + N(x,y)*y' = 0 and y' = f(x,y).
+    
+    Returns: (M, N, f_xy)
+    """
+    log_step(f"Normalizing ODE: solving for {dy_dx_marker}")
+    
+    # Flatten the LHS into additive terms 
+    flat_terms = flatten_ode_terms(ode_expr)
+
+    n_y_prime_term = None # The N * dy/dx term
+    m_terms = []          # The M(x,y) terms
+
+    # --- Pass 1: Separate M and N terms ---
+    for term in flat_terms:
+        is_derivative_term = False
+        
+        # Case 1: The term is dy/dx itself (N=1)
+        if term == dy_dx_marker:
+            n_y_prime_term = term
+            is_derivative_term = True
+            
+        # Case 2: The term is N * dy/dx
+        elif isinstance(term, Mul):
+            # Check if one factor is DyDx
+            if term.left == dy_dx_marker:
+                n_y_prime_term = term
+                is_derivative_term = True
+            elif term.right == dy_dx_marker:
+                n_y_prime_term = term
+                is_derivative_term = True
+                
+        # Case 3: All other M terms
+        if not is_derivative_term:
+            m_terms.append(term)
+
+    # --- Pass 2: Extract N and M ---
+    
+    # Extract N (the coefficient of dy/dx)
+    if n_y_prime_term == dy_dx_marker:
+        N = Const(1)
+    elif isinstance(n_y_prime_term, Mul):
+        # The factor that ISN'T dy/dx is N
+        if n_y_prime_term.left == dy_dx_marker:
+            N = n_y_prime_term.right
+        elif n_y_prime_term.right == dy_dx_marker:
+            N = n_y_prime_term.left
+    else:
+        # Should not happen if parsing is correct, but indicates a failure
+        log_step("Normalization failed: Could not isolate N*y' term.")
+        return None, None, ode_expr
+        
+
+    # M is the sum of all remaining terms
+    if not m_terms:
+        M = Const(0)
+    else:
+        M = m_terms[0]
+        for i in range(1, len(m_terms)):
+            M = Add(M, m_terms[i])
+        
+    # Final cleanup of M and N
+    M = rewrite(M, simplification_rules())
+    M = evaluate_constants(M)
+    N = rewrite(N, simplification_rules())
+    N = evaluate_constants(N)
+
+
+    # Calculate f(x,y) = -M / N (Since M + N*y' = 0 -> y' = -M/N)
+    f_xy = Div(Neg(M), N)
+    f_xy = rewrite(f_xy, simplification_rules())
+    f_xy = evaluate_constants(f_xy)
+
+    log_step(f"Decomposition: M={M}, N={N}")
+    log_step(f"Normalized RHS f(x,y): {f_xy}")
+    return M, N, f_xy
+
+
+def solve_separable_fx(f_x: Expr, x_var: str = "x") -> Expr:
+    """Solves dy/dx = f(x) by direct integration (y = ∫ f(x) dx + C)."""
+    log_step(f"Solving ODE using: Direct Integration (∫ f(x) dx + C)")
+    
+    # The integration function is now recursively fixed to solve all nested integrals
+    integral_result = integrate(f_x, x_var, reset=True)
+    
+    C = Var("C") 
+    solution = Add(integral_result, C)
+    return solution
+
+def ODEsolver(ode_expr: Expr, x_var: str = "x", y_var: str = "y") -> str:
+    """
+    Classifies and attempts to solve a first-order ODE given in the implicit form LHS = 0.
+    """
+    dy_dx_marker = DyDx(y_var, x_var)
+    
+    reset_log()
+    log_step(f"Starting ODE solver for ODE: {ode_expr} = 0")
+    
+    # 1. NORMALIZATION: Convert F(y', x, y) = 0 to M + N*y' = 0 and y' = f(x, y)
+    M, N, f_xy = normalize_ode(ode_expr, dy_dx_marker, x_var)
+    
+    if M is None:
+        return "Error: Normalization failed. Could not isolate the y' term."
+        
+    log_step(f"Normalized explicit form: dy/dx = {f_xy}")
+    
+    # 2. CLASSIFICATION
+    ode_type = classify_first_order(f_xy, x_var, y_var)
+    log_step(f"ODE classified as: {ode_type}")
+
+    # 3. SOLUTION STRATEGY (Only Separable-f(x) implemented in this simplified solver)
+    if ode_type == "Separable-f(x)":
+        solution = solve_separable_fx(f_xy, x_var)
+        return f"Solution y(x) = {solution}"
+    
+    # 4. FALLBACK for non-implemented types
+    return f"Classification: {ode_type}. Solution strategy for this type is not yet implemented."
+
+
+# ------------------------------------------------------------
+# ODE TEST HARNESS (Using full ODE syntax)
+# ------------------------------------------------------------
+if __name__ == "__main__":
+    print("\n=== ODE Solver and Classifier Test Harness ===\n")
+
+    x = Var("x")
+    y = Var("y")
+    dy_dx = DyDx("y", "x") # d(y)/d(x)
+    
+    tests = [
+        # ODE 1: dy/dx + 3x^2 + e^(2x) = 0. M = 3x^2 + e^(2x), N = 1.
+        (
+            "ODE 1: Separable f(x) (y' + M(x) = 0)",
+            Add(dy_dx, Add(Mul(Const(3), Pow(x, Const(2))), Exp(Mul(Const(2), x)))), 
+            "Separable-f(x)"
+        )
+        
+    ]
+
+    for name, ode_expr, expected_type in tests:
+        print(f"========================================")
+        print(f"▶ {name}")
+        print(f"Input ODE: {ode_expr} = 0")
+        
+        # Decompose for display
+        M, N, f_xy = normalize_ode(ode_expr, dy_dx, "x")
+        
+        # Run solver
+        result = ODEsolver(ode_expr, x_var="x", y_var="y")
+        
+        print(f"Decomposition:")
+        print(f"  M(x,y) = {M}")
+        print(f"  N(x,y) = {N}")
+        print(f"  y' = f(x,y) = {f_xy}")
+        
+        print(f"Solver Output: {result}")
+        print(f"Total rewrite steps logged: {get_step_counter()}")
+        print(f"Log written to: {LOG_FILE}\n")

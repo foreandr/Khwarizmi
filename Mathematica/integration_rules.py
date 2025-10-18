@@ -29,19 +29,21 @@ def integration_rules(var: str) -> list[tuple[Expr, Expr]]:
         (Integrate(Pow(v, Const(-1)), v), Log(Abs(v))),
         
         # --- CRITICAL FIX 1: Power Rule for Negative Integers (via Negation) ---
-        # Matches Pow(x, Neg(Const(n))), which is the output of 1/x^n -> x^-n
-        # Example: x^-3 is matched by Neg(Const(n)) where n=3.
         (Integrate(Pow(v, Neg(Const(n))), v),
-         Div(Pow(v, Add(Neg(Const(n)), Const(1))),
-             Add(Neg(Const(n)), Const(1)))),
+          Div(Pow(v, Add(Neg(Const(n)), Const(1))),
+              Add(Neg(Const(n)), Const(1)))),
 
         # --- CRITICAL FIX 2: Power Rule (General case, handles x^3) ---
-        # Matches Pow(x, Const(n)), where n is any number (positive or negative)
         (Integrate(Pow(v, Const(n)), v),
-         Div(Pow(v, Add(Const(n), Const(1))),
-             Add(Const(n), Const(1)))),
+          Div(Pow(v, Add(Const(n), Const(1))),
+              Add(Const(n), Const(1)))),
 
-        # --- Exponential & Trig ---
+        # --- NEW CRITICAL RULE: Linear Exponential (e^(c*x)) ---
+        # This solves ∫ e^(c*x) dx = (1/c) * e^(c*x) and fixes the ODE issue.
+        (Integrate(Exp(Mul(Const(c), v)), v),
+         Mul(Div(Const(1), Const(c)), Exp(Mul(Const(c), v)))),
+
+        # --- Exponential & Trig (e^x case remains) ---
         (Integrate(Exp(v), v), Exp(v)),
         (Integrate(Cos(v), v), Sin(v)),
         (Integrate(Sin(v), v), Neg(Cos(v))),
@@ -55,9 +57,9 @@ def integration_rules(var: str) -> list[tuple[Expr, Expr]]:
 
         # --- Inverse Trig (ArcTan: 1/(a^2+x^2)) ---
         (Integrate(Div(Const(1), Add(Const(a_sq), Pow(v, Const(2)))), v),
-         Mul(Div(Const(1), a), ArcTan(Div(v, a)))),
+          Mul(Div(Const(1), a), ArcTan(Div(v, a)))),
 
         # --- Inverse Trig (ArcSin: 1/sqrt(a^2-x^2)) ---
         (Integrate(Div(Const(1), Pow(Sub(Const(a_sq), Pow(v, Const(2))), Div(Const(1), Const(2)))), v),
-         ArcSin(Div(v, a))),
+          ArcSin(Div(v, a))),
     ]
