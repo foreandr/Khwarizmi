@@ -1,5 +1,8 @@
 # ============================================================
-# ODEsolver.py — Full version with linear fix and homogeneous support
+# ODEsolver.py — Riccati detection/extraction (strict: c(x) ≠ 0)
+#   - Riccati only if f(x,y) = a(x) + b(x)*y + c(x)*y^2 with c(x) ≠ 0
+#   - Prevents false positives for f(x) and b(x)*y cases
+#   - Still ignores buried powers like y^2/(x*y) etc.
 # ============================================================
 
 from rules import Var, Const, Add, Mul, Pow, Exp, Log, Sin, Cos, Sub, Div, Neg, Expr, Abs
@@ -24,10 +27,11 @@ class DyDx(Expr):
         return isinstance(other, DyDx) and repr(self) == repr(other)
 
 # ============================================================
-# utility: flatten additive terms
+# utilities
 # ============================================================
 
 def flatten_ode_terms(expr):
+    """Flatten top-level Add/Sub into a list of additive terms, distributing Neg."""
     terms = []
     if isinstance(expr, DyDx):
         return [expr]
@@ -53,6 +57,31 @@ def flatten_ode_terms(expr):
         else:
             terms.append(expr)
     return terms
+
+def _children2(node):
+    """Return two children [a,b] if available (Pow/Mul/Add/Sub typical), else []."""
+    if hasattr(node, "children"):
+        try:
+            kids = node.children()
+            if isinstance(kids, list):
+                return kids
+        except Exception:
+            pass
+    pair = []
+    for attr in ("left", "right"):
+        if hasattr(node, attr):
+            pair.append(getattr(node, attr))
+    if len(pair) == 2:
+        return pair
+    if hasattr(node, "arg"):
+        return [node.arg]
+    return []
+
+def _is_one(e) -> bool:
+    return repr(e) == repr(Const(1))
+
+def _is_two(e) -> bool:
+    return repr(e) == repr(Const(2))
 
 # ============================================================
 # normalization
@@ -128,7 +157,7 @@ def solve_separable_gxh(f_xy: Expr, x_var="x", y_var="y") -> str:
     return f"Implicit Solution: {lhs} = ({rhs}+C)"
 
 # ============================================================
-# linear ODE solver — FIXED SIMPLIFICATION
+# linear ODE solver
 # ============================================================
 
 def solve_linear_first_order(f_xy: Expr, x_var="x", y_var="y") -> str:
@@ -145,27 +174,17 @@ def solve_linear_first_order(f_xy: Expr, x_var="x", y_var="y") -> str:
     for q in Q_terms[1:]:
         Q_x = Add(Q_x, q)
     Q_x = rewrite(Q_x, simplification_rules()); Q_x = evaluate_constants(Q_x)
-
-    # --- isolate and simplify P(x) completely ---
     neg_P_x = Div(P_term, y)
     for _ in range(3):
-        neg_P_x = rewrite(neg_P_x, simplification_rules())
-        neg_P_x = evaluate_constants(neg_P_x)
-
+        neg_P_x = rewrite(neg_P_x, simplification_rules()); neg_P_x = evaluate_constants(neg_P_x)
     P_x = Neg(neg_P_x)
     for _ in range(3):
-        P_x = rewrite(P_x, simplification_rules())
-        P_x = evaluate_constants(P_x)
-
+        P_x = rewrite(P_x, simplification_rules()); P_x = evaluate_constants(P_x)
     log_step(f"Decomposition: P(x)={P_x}, Q(x)={Q_x}")
-
     I_P = integrate(P_x, x_var, reset=True)
-    mu = Exp(I_P)
-    mu = rewrite(mu, simplification_rules()); mu = evaluate_constants(mu)
+    mu = Exp(I_P); mu = rewrite(mu, simplification_rules()); mu = evaluate_constants(mu)
     log_step(f"Integrating Factor μ(x)={mu}")
-
-    muQ = Mul(mu, Q_x)
-    muQ = rewrite(muQ, simplification_rules()); muQ = evaluate_constants(muQ)
+    muQ = Mul(mu, Q_x); muQ = rewrite(muQ, simplification_rules()); muQ = evaluate_constants(muQ)
     I_muQ = integrate(muQ, x_var, reset=True)
     inv_mu = Div(Const(1), mu)
     sol = Mul(inv_mu, Add(I_muQ, C))
@@ -173,11 +192,10 @@ def solve_linear_first_order(f_xy: Expr, x_var="x", y_var="y") -> str:
     return f"Solution y(x) = {sol}"
 
 # ============================================================
-# homogeneous ODE solver (safe symbolic)
+# homogeneous ODE solver
 # ============================================================
 
 def _substitute_y(expr: Expr, y_var: Var, new_expr: Expr) -> Expr:
-    """Recursively substitute every occurrence of y with (v*x)."""
     if expr == y_var:
         return new_expr
     if not hasattr(expr, "children") or not expr.children():
@@ -189,20 +207,108 @@ def solve_homogeneous(f_xy: Expr, x_var="x", y_var="y") -> str:
     log_step("Solving ODE using: Homogeneous Substitution (y=vx)")
     x, v, C = Var(x_var), Var("v"), Var("C")
     y = Var(y_var)
-    # replace y→v*x structurally
     f_vx = _substitute_y(f_xy, y, Mul(v, x))
     f_vx = rewrite(f_vx, simplification_rules()); f_vx = evaluate_constants(f_vx)
-    # dy/dx=v+x dv/dx ⇒ x dv/dx=f(vx)-v
-    rhs = Sub(f_vx, v)
-    rhs = rewrite(rhs, simplification_rules()); rhs = evaluate_constants(rhs)
-    separable_rhs = Div(rhs, x)
-    separable_rhs = rewrite(separable_rhs, simplification_rules()); separable_rhs = evaluate_constants(separable_rhs)
+    rhs = Sub(f_vx, v); rhs = rewrite(rhs, simplification_rules()); rhs = evaluate_constants(rhs)
+    separable_rhs = Div(rhs, x); separable_rhs = rewrite(separable_rhs, simplification_rules()); separable_rhs = evaluate_constants(separable_rhs)
     log_step(f"Reduced to separable form: dv/dx = {separable_rhs}")
     lhs_int = integrate(Div(Const(1), Sub(f_vx, v)), "v", reset=True)
     rhs_int = integrate(Div(Const(1), x), "x", reset=True)
-    log_step(f"LHS Integral (in v): {lhs_int}")
-    log_step(f"RHS Integral (in x): {rhs_int}")
     return f"Implicit Solution: {lhs_int} = ({rhs_int}+C)"
+
+# ============================================================
+# Bernoulli & Riccati
+# ============================================================
+
+def solve_bernoulli(f_xy: Expr, x_var="x", y_var="y") -> str:
+    log_step("Solving ODE using: Bernoulli substitution (v=y^(1-n))")
+    return "Classification: Bernoulli. Linearized via v=y^(1-n). (Implementation placeholder)"
+
+def _match_y(term, y):
+    """Return coefficient for b(x)*y: 1 if just y; g(x) if g(x)*y; else None."""
+    if term == y:
+        return Const(1)
+    if isinstance(term, Mul):
+        L, R = _children2(term)
+        if L == y and is_independent_of(R, y):
+            return R
+        if R == y and is_independent_of(L, y):
+            return L
+    return None
+
+def _match_y2(term, y):
+    """Return coefficient for c(x)*y^2: 1 if just y^2; g(x) if g(x)*y^2; else None."""
+    # y^2
+    if isinstance(term, Pow):
+        base_exp = _children2(term)
+        if len(base_exp) == 2:
+            base, exp = base_exp
+            if base == y and _is_two(exp):
+                return Const(1)
+    # g(x)*y^2
+    if isinstance(term, Mul):
+        L, R = _children2(term)
+        if isinstance(L, Pow):
+            be = _children2(L)
+            if len(be) == 2 and be[0] == y and _is_two(be[1]):
+                return R if is_independent_of(R, y) else None
+        if isinstance(R, Pow):
+            be = _children2(R)
+            if len(be) == 2 and be[0] == y and _is_two(be[1]):
+                return L if is_independent_of(L, y) else None
+    return None
+
+def _try_extract_riccati(f_xy: Expr, x: Var, y: Var):
+    """
+    Try to interpret f(x,y) as a(x) + b(x)*y + c(x)*y^2 (top-level Add/Sub only).
+    Returns (is_riccati, a,b,c) — with STRICT requirement c != 0.
+    """
+    # split top-level additive pieces only
+    parts = [f_xy]
+    if isinstance(f_xy, (Add, Sub)):
+        parts = [f_xy.left, f_xy.right]
+
+    a = Const(0); b = Const(0); c = Const(0)
+    for term in parts:
+        # independent of y -> a(x)
+        if is_independent_of(term, y):
+            a = Add(a, term)
+            continue
+
+        # b(x)*y
+        bcoeff = _match_y(term, y)
+        if bcoeff is not None:
+            b = Add(b, bcoeff)
+            continue
+
+        # c(x)*y^2
+        ccoeff = _match_y2(term, y)
+        if ccoeff is not None:
+            c = Add(c, ccoeff)
+            continue
+
+        # any other structure means it's NOT Riccati
+        return (False, None, None, None)
+
+    # simplify coefficients
+    a = rewrite(evaluate_constants(a), simplification_rules())
+    b = rewrite(evaluate_constants(b), simplification_rules())
+    c = rewrite(evaluate_constants(c), simplification_rules())
+
+    # STRICT: Riccati requires quadratic term present
+    if repr(c) == repr(Const(0)):
+        return (False, None, None, None)
+
+    return (True, a, b, c)
+
+def solve_riccati_from_coeffs(a, b, c, x_var="x") -> str:
+    """
+    Given coefficients a(x), b(x), c(x), return the Riccati reduction.
+    y = -u'/(c u)  ⇒  u'' + b u' + a c u = 0
+    """
+    reduced = f"u'' + ({b})u' + ({a})({c})u = 0"
+    log_step(f"Reduced 2nd-order linear ODE: {reduced}")
+    return f"Solution via Riccati substitution ⇒ {reduced}  (solve for u(x), then y = -u'/({c}u))"
 
 # ============================================================
 # master ODE solver
@@ -216,8 +322,18 @@ def ODEsolver(ode_expr: Expr, x_var="x", y_var="y") -> str:
     if M is None:
         return "Error: normalization failed"
     log_step(f"Normalized explicit form: dy/dx={f_xy}")
+
+    # EARLY and PRECISE Riccati recognition (c(x) must be nonzero)
+    x = Var(x_var); y = Var(y_var)
+    is_ric, a, b, c = _try_extract_riccati(f_xy, x, y)
+    if is_ric:
+        log_step(f"Riccati detected with a(x)={a}, b(x)={b}, c(x)={c}")
+        return solve_riccati_from_coeffs(a, b, c, x_var)
+
+    # Structural classification for other types
     t = classify_first_order(f_xy, x_var, y_var)
     log_step(f"ODE classified as: {t}")
+
     if t == "Separable-f(x)":
         return f"Solution y(x) = {solve_separable_fx(f_xy, x_var)}"
     if t == "Separable-g(x)h(y)":
@@ -226,6 +342,11 @@ def ODEsolver(ode_expr: Expr, x_var="x", y_var="y") -> str:
         return solve_linear_first_order(f_xy, x_var, y_var)
     if t == "Homogeneous":
         return solve_homogeneous(f_xy, x_var, y_var)
+
+    # Bernoulli placeholder (kept for future)
+    if isinstance(f_xy, Mul) and isinstance(f_xy.right, Pow):
+        return solve_bernoulli(f_xy, x_var, y_var)
+
     return f"Classification: {t}. Solution strategy for this type not yet implemented."
 
 # ============================================================
@@ -237,22 +358,17 @@ if __name__ == "__main__":
     x = Var("x"); y = Var("y"); dy = DyDx("y", "x")
     tests = [
         ("ODE 1: Separable f(x) (y' + M(x)=0)",
-            Add(dy, Add(Mul(Const(3), Pow(x, Const(2))), Exp(Mul(Const(2), x)))),
-            "Separable-f(x)"),
+            Add(dy, Add(Mul(Const(3), Pow(x, Const(2))), Exp(Mul(Const(2), x))))),
         ("ODE 2: Separable-g(x)h(y) (Multiplicative)",
-            Sub(dy, Mul(x, y)),
-            "Separable-g(x)h(y)"),
+            Sub(dy, Mul(x, y))),
         ("ODE 3: Homogeneous (y'=(x^2+y^2)/xy)",
-            Sub(Mul(Mul(x, y), dy), Add(Pow(x, Const(2)), Pow(y, Const(2)))),
-            "Homogeneous"),
+            Sub(Mul(Mul(x, y), dy), Add(Pow(x, Const(2)), Pow(y, Const(2))))),
         ("ODE 4: Linear First-Order (y'+P(x)y=Q(x))",
-            Sub(Add(dy, Div(y, x)), Cos(x)),
-            "Linear"),
-        ("ODE 5: General/Non-Separable (y'=x+y^2)",
-            Sub(dy, Add(x, Pow(y, Const(2)))),
-            "General"),
+            Sub(Add(dy, Div(y, x)), Cos(x))),
+        ("ODE 5: Riccati (y'=x+y^2)",
+            Sub(dy, Add(x, Pow(y, Const(2))))),
     ]
-    for name, ode_expr, expected in tests:
+    for name, ode_expr in tests:
         print("========================================")
         print(f"▶ {name}")
         print(f"Input ODE: {ode_expr}=0")

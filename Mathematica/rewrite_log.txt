@@ -5,4 +5,6 @@ step 4: [depth 0] (-(-?x)) -> ?x on (-(-(x+(y^2))))
 step 5: [depth 0] Decomposition: M=(-(x+(y^2))), N=1
 step 6: [depth 0] Normalized RHS f(x,y): (x+(y^2))
 step 7: [depth 0] Normalized explicit form: dy/dx=(x+(y^2))
-step 8: [depth 0] ODE classified as: General
+step 8: [depth 0] (0+?x) -> ?x on (0+x)
+step 9: [depth 0] Riccati detected with a(x)=x, b(x)=0, c(x)=1
+step 10: [depth 0] Reduced 2nd-order linear ODE: u'' + (0)u' + (x)(1)u = 0
