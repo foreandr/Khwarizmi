@@ -1,10 +1,10 @@
-# ODEsolver.py (FINAL FIXED VERSION with Separable-f(x) solver)
+# ODEsolver.py (Adding Separable-g(x)h(y) solver)
 
-from rules import Var, Const, Add, Mul, Pow, Exp, Log, Sin, Cos, Sub, Div, Neg, Expr 
+from rules import Var, Const, Add, Mul, Pow, Exp, Log, Sin, Cos, Sub, Div, Neg, Expr, Abs # Need Abs for integration
 from integration import integrate
 from ODEclassifier import classify_first_order
 from utils import is_independent_of # CRITICAL: Needed for decomposition
-from logger import reset_log, log_step, get_step_counter, LOG_FILE 
+from logger import reset_log, log_step, get_step_counter, LOG_FILE  
 from simplification import rewrite, simplification_rules, evaluate_constants
 
 # New symbolic class to represent the derivative dy/dx.
@@ -141,6 +141,57 @@ def solve_separable_fx(f_x: Expr, x_var: str = "x") -> Expr:
     solution = Add(integral_result, C)
     return solution
 
+# --- NEW SOLVER IMPLEMENTATION for ODE 2 ---
+def solve_separable_gxh(f_xy: Expr, x_var: str = "x", y_var: str = "y") -> str:
+    """Solves dy/dx = g(x)h(y) by separating variables (∫ 1/h(y) dy = ∫ g(x) dx + C)."""
+    log_step(f"Solving ODE using: Separation of Variables (∫ 1/h(y) dy = ∫ g(x) dx + C)")
+    
+    x = Var(x_var)
+    y = Var(y_var)
+    
+    # 1. Determine g(x) and h(y) from f_xy (assumes f_xy is Mul/Div form from classifier)
+    g_x, h_y = None, None
+    if isinstance(f_xy, (Mul, Div)):
+        # Check for g(x) * h(y) or h(y) * g(x)
+        if is_independent_of(f_xy.left, y) and is_independent_of(f_xy.right, x):
+            g_x = f_xy.left
+            h_y = f_xy.right
+        elif is_independent_of(f_xy.right, y) and is_independent_of(f_xy.left, x):
+            g_x = f_xy.right
+            h_y = f_xy.left
+        
+    # Final check for separable function form (should not be needed if classifier is perfect)
+    if g_x is None or h_y is None:
+        if is_independent_of(f_xy, y): 
+             g_x, h_y = f_xy, Const(1) # Already handled by Separable-f(x), but good fallback
+        elif is_independent_of(f_xy, x): 
+             g_x, h_y = Const(1), f_xy # y' = h(y)
+        else:
+             return "Classification: Separable-g(x)h(y). Error in g(x)h(y) decomposition."
+
+
+    # 2. Formulate 1/h(y)
+    one_over_h_y = Div(Const(1), h_y)
+    one_over_h_y = rewrite(one_over_h_y, simplification_rules())
+    one_over_h_y = evaluate_constants(one_over_h_y)
+    
+    # 3. Integrate LHS (in terms of y)
+    lhs_integral = integrate(one_over_h_y, y_var, reset=True)
+    
+    # 4. Integrate RHS (in terms of x)
+    rhs_integral = integrate(g_x, x_var, reset=True)
+    
+    log_step(f"g(x) = {g_x}, h(y) = {h_y}")
+    log_step(f"LHS Integral ∫ (1/h) dy: {lhs_integral}")
+    log_step(f"RHS Integral ∫ g(x) dx: {rhs_integral}")
+    
+    # 5. Formulate implicit solution: ∫ 1/h(y) dy = ∫ g(x) dx + C
+    
+    # We return a string to denote an implicit solution (since we cannot explicitly solve for y)
+    return f"Implicit Solution: {lhs_integral} = ({rhs_integral}+C)"
+
+# -----------------------------------------------
+
 def ODEsolver(ode_expr: Expr, x_var: str = "x", y_var: str = "y") -> str:
     """
     Classifies and attempts to solve a first-order ODE given in the implicit form LHS = 0.
@@ -162,10 +213,15 @@ def ODEsolver(ode_expr: Expr, x_var: str = "x", y_var: str = "y") -> str:
     ode_type = classify_first_order(f_xy, x_var, y_var)
     log_step(f"ODE classified as: {ode_type}")
 
-    # 3. SOLUTION STRATEGY (Only Separable-f(x) implemented in this simplified solver)
+    # 3. SOLUTION STRATEGY (Now supports Separable-f(x) and Separable-g(x)h(y))
     if ode_type == "Separable-f(x)":
         solution = solve_separable_fx(f_xy, x_var)
         return f"Solution y(x) = {solution}"
+    
+    # NEW SOLVER IMPLEMENTATION CHECK
+    if ode_type == "Separable-g(x)h(y)":
+        solution = solve_separable_gxh(f_xy, x_var, y_var)
+        return solution # Returns the explicit string for implicit solution
     
     # 4. FALLBACK for non-implemented types
     return f"Classification: {ode_type}. Solution strategy for this type is not yet implemented."
@@ -182,15 +238,47 @@ if __name__ == "__main__":
     dy_dx = DyDx("y", "x") # d(y)/d(x)
     
     tests = [
-        # ODE 1: dy/dx + 3x^2 + e^(2x) = 0. M = 3x^2 + e^(2x), N = 1.
+        
+        # --- Type: Separable-f(x) (Already Solved) ---
         (
             "ODE 1: Separable f(x) (y' + M(x) = 0)",
+            # dy/dx + 3x^2 + e^(2x) = 0
             Add(dy_dx, Add(Mul(Const(3), Pow(x, Const(2))), Exp(Mul(Const(2), x)))), 
             "Separable-f(x)"
-        )
+        ),
         
+        # --- Type: Separable-g(x)h(y) (NOW SOLVABLE) ---
+        (
+            "ODE 2: Separable-g(x)h(y) (Multiplicative)",
+            # dy/dx - x*y = 0  -> dy/dx = x*y  (g(x)=x, h(y)=y)
+            Sub(dy_dx, Mul(x, y)), 
+            "Separable-g(x)h(y)"
+        ),
+        
+        # --- Type: Homogeneous ---
+        (
+            "ODE 3: Homogeneous (y' = (x^2+y^2)/xy)",
+            # x*y*dy/dx - x^2 - y^2 = 0
+            Sub(Mul(Mul(x, y), dy_dx), Add(Pow(x, Const(2)), Pow(y, Const(2)))),
+            "Homogeneous"
+        ),
+        
+        # --- Type: Linear First-Order ---
+        (
+            "ODE 4: Linear First-Order (y' + P(x)y = Q(x))",
+            # dy/dx + (1/x)y - cos(x) = 0
+            Sub(Add(dy_dx, Div(y, x)), Cos(x)),
+            "Linear" 
+        ),
+        
+        # --- Type: General (The fallback type) ---
+        (
+            "ODE 5: General/Non-Separable (y' = x + y^2)",
+            # dy/dx - x - y^2 = 0
+            Sub(dy_dx, Add(x, Pow(y, Const(2)))),
+            "General" 
+        ),
     ]
-
     for name, ode_expr, expected_type in tests:
         print(f"========================================")
         print(f"▶ {name}")
