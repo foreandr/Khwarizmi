@@ -27,6 +27,7 @@ def integration_rules(var: str) -> list[tuple[Expr, Expr]]:
 
         # --- Log Rule (n = -1, MUST BE FIRST) ---
         (Integrate(Pow(v, Const(-1)), v), Log(Abs(v))),
+        (Integrate(v, v), Div(Pow(v, Const(2)), Const(2))),
         
         # --- CRITICAL FIX 1: Power Rule for Negative Integers (via Negation) ---
         (Integrate(Pow(v, Neg(Const(n))), v),
